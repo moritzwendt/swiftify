@@ -16,6 +16,7 @@ func formatTime(_ ms: Double) -> String {
 }
 
 struct ArtworkView: View {
+    @Environment(AppSettings.self) private var settings
     let url: URL?
     var cornerRadius: CGFloat = 8
     var circle = false
@@ -38,15 +39,16 @@ struct ArtworkView: View {
                     }
                 }
             }
-            .clipShape(circle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)))
+            .clipShape(circle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: settings.squareArtwork ? 0 : cornerRadius, style: .continuous)))
     }
 }
 
 struct LikedArtwork: View {
+    @Environment(AppSettings.self) private var settings
     var cornerRadius: CGFloat = 8
 
     var body: some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: settings.squareArtwork ? 0 : cornerRadius, style: .continuous)
             .fill(LinearGradient(colors: [.indigo, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
             .aspectRatio(1, contentMode: .fit)
             .overlay {
@@ -99,6 +101,7 @@ struct TrackRow: View {
     var number: Int?
     var artworkURL: URL?
     @Environment(PlayerManager.self) private var player
+    @Environment(AppSettings.self) private var settings
 
     private var isCurrent: Bool { player.track?.uri == track.uri }
 
@@ -117,10 +120,16 @@ struct TrackRow: View {
                 Text(track.name)
                     .foregroundStyle(isCurrent ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                     .lineLimit(1)
-                Text(track.artistLine)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    if settings.showExplicitBadge && track.explicit == true {
+                        Image(systemName: "e.square.fill")
+                            .font(.caption)
+                    }
+                    Text(track.artistLine)
+                        .lineLimit(1)
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
             if isCurrent && player.isPlaying {
@@ -206,7 +215,21 @@ enum ArtworkTint {
     }
 }
 
+struct HapticModifier<Trigger: Equatable>: ViewModifier {
+    @Environment(AppSettings.self) private var settings
+    let feedback: SensoryFeedback
+    let trigger: Trigger
+
+    func body(content: Content) -> some View {
+        content.sensoryFeedback(feedback, trigger: trigger) { _, _ in settings.haptics }
+    }
+}
+
 extension View {
+    func haptic<Trigger: Equatable>(_ feedback: SensoryFeedback, trigger: Trigger) -> some View {
+        modifier(HapticModifier(feedback: feedback, trigger: trigger))
+    }
+
     func appDestinations() -> some View {
         navigationDestination(for: Route.self) { route in
             switch route {

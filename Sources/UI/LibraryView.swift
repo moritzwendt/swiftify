@@ -28,7 +28,11 @@ struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
     @State private var filter: LibraryFilter?
-    @State private var sort: LibrarySort = .recents
+
+    private var sort: LibrarySort {
+        get { LibrarySort(rawValue: settings.librarySortRaw) ?? .recents }
+        nonmutating set { settings.librarySortRaw = newValue.rawValue }
+    }
 
     private var items: [LibraryItem] {
         var all: [LibraryItem] = []
@@ -96,7 +100,7 @@ struct LibraryView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
 
-                if filter == nil || filter == .playlists {
+                if settings.showLikedSongsRow && (filter == nil || filter == .playlists) {
                     NavigationLink(value: Route.likedSongs) {
                         MediaRow(
                             imageURL: nil,
@@ -191,7 +195,7 @@ struct LibraryView: View {
     private var sortRow: some View {
         HStack {
             Menu {
-                Picker("Sort by", selection: $sort) {
+                Picker("Sort by", selection: Binding(get: { sort }, set: { sort = $0 })) {
                     ForEach(LibrarySort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
             } label: {

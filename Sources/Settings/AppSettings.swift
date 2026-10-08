@@ -72,24 +72,131 @@ extension Color {
     }
 }
 
+enum TopArtistsRange: String, CaseIterable, Identifiable {
+    case shortTerm = "short_term"
+    case mediumTerm = "medium_term"
+    case longTerm = "long_term"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .shortTerm: "Last 4 weeks"
+        case .mediumTerm: "Last 6 months"
+        case .longTerm: "All time"
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class AppSettings {
+    private static let defaults = UserDefaults.standard
+
     var appearance: AppearanceMode {
-        didSet { UserDefaults.standard.set(appearance.rawValue, forKey: "settings.appearance") }
+        didSet { Self.defaults.set(appearance.rawValue, forKey: "settings.appearance") }
     }
 
     var accentHex: String {
-        didSet { UserDefaults.standard.set(accentHex, forKey: "settings.accentHex") }
+        didSet { Self.defaults.set(accentHex, forKey: "settings.accentHex") }
+    }
+
+    var dynamicPlayerBackground: Bool {
+        didSet { Self.defaults.set(dynamicPlayerBackground, forKey: "settings.dynamicPlayerBackground") }
+    }
+
+    var squareArtwork: Bool {
+        didSet { Self.defaults.set(squareArtwork, forKey: "settings.squareArtwork") }
+    }
+
+    var tabBarMinimizes: Bool {
+        didSet { Self.defaults.set(tabBarMinimizes, forKey: "settings.tabBarMinimizes") }
+    }
+
+    var haptics: Bool {
+        didSet { Self.defaults.set(haptics, forKey: "settings.haptics") }
+    }
+
+    var showExplicitBadge: Bool {
+        didSet { Self.defaults.set(showExplicitBadge, forKey: "settings.showExplicitBadge") }
+    }
+
+    var homeShowRecent: Bool {
+        didSet { Self.defaults.set(homeShowRecent, forKey: "settings.homeShowRecent") }
+    }
+
+    var homeShowTopArtists: Bool {
+        didSet { Self.defaults.set(homeShowTopArtists, forKey: "settings.homeShowTopArtists") }
+    }
+
+    var homeQuickCount: Int {
+        didSet { Self.defaults.set(homeQuickCount, forKey: "settings.homeQuickCount") }
+    }
+
+    var topArtistsRange: TopArtistsRange {
+        didSet { Self.defaults.set(topArtistsRange.rawValue, forKey: "settings.topArtistsRange") }
+    }
+
+    var librarySortRaw: String {
+        didSet { Self.defaults.set(librarySortRaw, forKey: "settings.librarySort") }
+    }
+
+    var showLikedSongsRow: Bool {
+        didSet { Self.defaults.set(showLikedSongsRow, forKey: "settings.showLikedSongsRow") }
+    }
+
+    var previousRestartSeconds: Int {
+        didSet { Self.defaults.set(previousRestartSeconds, forKey: "settings.previousRestartSeconds") }
+    }
+
+    var preferredDeviceID: String? {
+        didSet { Self.defaults.set(preferredDeviceID, forKey: "settings.preferredDeviceID") }
+    }
+
+    var preferredDeviceName: String? {
+        didSet { Self.defaults.set(preferredDeviceName, forKey: "settings.preferredDeviceName") }
     }
 
     init() {
-        let defaults = UserDefaults.standard
+        let defaults = Self.defaults
         appearance = AppearanceMode(rawValue: defaults.string(forKey: "settings.appearance") ?? "") ?? .system
         accentHex = defaults.string(forKey: "settings.accentHex") ?? AccentPreset.all[0].hex
+        dynamicPlayerBackground = defaults.object(forKey: "settings.dynamicPlayerBackground") as? Bool ?? true
+        squareArtwork = defaults.object(forKey: "settings.squareArtwork") as? Bool ?? false
+        tabBarMinimizes = defaults.object(forKey: "settings.tabBarMinimizes") as? Bool ?? true
+        haptics = defaults.object(forKey: "settings.haptics") as? Bool ?? true
+        showExplicitBadge = defaults.object(forKey: "settings.showExplicitBadge") as? Bool ?? true
+        homeShowRecent = defaults.object(forKey: "settings.homeShowRecent") as? Bool ?? true
+        homeShowTopArtists = defaults.object(forKey: "settings.homeShowTopArtists") as? Bool ?? true
+        homeQuickCount = defaults.object(forKey: "settings.homeQuickCount") as? Int ?? 6
+        topArtistsRange = TopArtistsRange(rawValue: defaults.string(forKey: "settings.topArtistsRange") ?? "") ?? .mediumTerm
+        librarySortRaw = defaults.string(forKey: "settings.librarySort") ?? "Recents"
+        showLikedSongsRow = defaults.object(forKey: "settings.showLikedSongsRow") as? Bool ?? true
+        previousRestartSeconds = defaults.object(forKey: "settings.previousRestartSeconds") as? Int ?? 3
+        preferredDeviceID = defaults.string(forKey: "settings.preferredDeviceID")
+        preferredDeviceName = defaults.string(forKey: "settings.preferredDeviceName")
     }
 
     var accent: Color { Color(hex: accentHex) }
 
     var onAccent: Color { accent.isLight ? .black : .white }
+
+    func reset() {
+        appearance = .system
+        accentHex = AccentPreset.all[0].hex
+        dynamicPlayerBackground = true
+        squareArtwork = false
+        tabBarMinimizes = true
+        haptics = true
+        showExplicitBadge = true
+        homeShowRecent = true
+        homeShowTopArtists = true
+        homeQuickCount = 6
+        topArtistsRange = .mediumTerm
+        librarySortRaw = "Recents"
+        showLikedSongsRow = true
+        previousRestartSeconds = 3
+        preferredDeviceID = nil
+        preferredDeviceName = nil
+    }
 }

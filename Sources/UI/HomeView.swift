@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
+    @Environment(AppSettings.self) private var settings
     @State private var recentAlbums: [Album] = []
     @State private var topArtists: [Artist] = []
 
@@ -20,7 +21,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     quickGrid
 
-                    if !recentAlbums.isEmpty {
+                    if settings.homeShowRecent && !recentAlbums.isEmpty {
                         shelf("Recently played") {
                             ForEach(recentAlbums) { album in
                                 NavigationLink(value: Route.album(album)) {
@@ -35,7 +36,7 @@ struct HomeView: View {
                         }
                     }
 
-                    if !topArtists.isEmpty {
+                    if settings.homeShowTopArtists && !topArtists.isEmpty {
                         shelf("Your top artists") {
                             ForEach(topArtists) { artist in
                                 NavigationLink(value: Route.artist(artist)) {
@@ -59,7 +60,7 @@ struct HomeView: View {
                 ToolbarItem(placement: .topBarTrailing) { ProfileButton() }
             }
             .appDestinations()
-            .task { await loadShelves() }
+            .task(id: settings.topArtistsRange) { await loadShelves() }
             .refreshable {
                 await library.load(force: true)
                 await loadShelves()
@@ -72,7 +73,7 @@ struct HomeView: View {
             NavigationLink(value: Route.likedSongs) {
                 quickCard(title: "Liked Songs", imageURL: nil, liked: true)
             }
-            ForEach(library.playlists.prefix(5)) { playlist in
+            ForEach(library.playlists.prefix(max(settings.homeQuickCount - 1, 0))) { playlist in
                 NavigationLink(value: Route.playlist(playlist)) {
                     quickCard(title: playlist.name, imageURL: playlist.images.url(atLeast: 100), liked: false)
                 }
@@ -124,7 +125,7 @@ struct HomeView: View {
         recentAlbums = (history?.items ?? []).compactMap { $0.track?.album }.filter { seen.insert($0.id).inserted }.prefix(12).map { $0 }
         let top: Page<Artist>? = try? await library.api.get(
             "me/top/artists",
-            query: ["limit": "12", "time_range": "medium_term"]
+            query: ["limit": "12", "time_range": settings.topArtistsRange.rawValue]
         )
         topArtists = top?.items ?? []
     }

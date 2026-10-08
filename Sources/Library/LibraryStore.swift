@@ -73,6 +73,11 @@ final class LibraryStore {
         UserDefaults.standard.set(Array(downloaded), forKey: Self.downloadedKey)
     }
 
+    func clearDownloaded() {
+        downloaded = []
+        UserDefaults.standard.removeObject(forKey: Self.downloadedKey)
+    }
+
     func createPlaylist(named name: String) async throws {
         let created: Playlist = try await api.post("me/playlists", body: ["name": name, "public": false])
         playlists.insert(created, at: 0)

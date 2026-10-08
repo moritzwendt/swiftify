@@ -95,12 +95,13 @@ struct ScrubberView: View {
 
 struct FullPlayerView: View {
     @Environment(PlayerManager.self) private var player
+    @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
     @State private var tint: Color = .gray
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [tint.mix(with: .black, by: 0.3), .black], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [settings.dynamicPlayerBackground ? tint.mix(with: .black, by: 0.3) : Color(white: 0.2), .black], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
@@ -148,7 +149,7 @@ struct FullPlayerView: View {
                         await player.toggleShuffle()
                     }
                     transportButton("backward.fill", size: .title2) {
-                        await player.previous()
+                        await player.skipBack()
                     }
                     Button {
                         Task { await player.togglePlay() }
@@ -180,8 +181,12 @@ struct FullPlayerView: View {
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
+        .haptic(.impact, trigger: player.isPlaying)
+        .haptic(.selection, trigger: player.shuffle)
+        .haptic(.selection, trigger: player.repeatMode)
+        .haptic(.success, trigger: player.isLiked)
         .task(id: player.track?.uri) {
-            guard let url = player.artworkURL(atLeast: 100) else { return }
+            guard settings.dynamicPlayerBackground, let url = player.artworkURL(atLeast: 100) else { return }
             if let color = await ArtworkTint.color(for: url) {
                 withAnimation(.easeInOut(duration: 0.6)) { tint = color }
             }

@@ -55,6 +55,7 @@ struct LoginView: View {
 struct MainTabView: View {
     @Environment(PlayerManager.self) private var player
     @Environment(LibraryStore.self) private var library
+    @Environment(AppSettings.self) private var settings
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .home
     @State private var showCreate = false
@@ -67,7 +68,7 @@ struct MainTabView: View {
             Tab("Your Library", systemImage: "books.vertical.fill", value: AppTab.library) { LibraryView() }
             Tab("Create", systemImage: "plus", value: AppTab.create) { Color.clear }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabBarMinimizeBehavior(settings.tabBarMinimizes ? .onScrollDown : .never)
         .tabViewBottomAccessory(isEnabled: player.track != nil) {
             MiniPlayer { showPlayer = true }
         }

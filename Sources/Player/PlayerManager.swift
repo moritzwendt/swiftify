@@ -16,10 +16,12 @@ final class PlayerManager {
     @ObservationIgnored private var baseDate = Date()
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private let api: SpotifyAPI
+    @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored var isSample = false
 
-    init(api: SpotifyAPI) {
+    init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
+        self.settings = settings
     }
 
     var durationMs: Double { Double(track?.durationMs ?? 0) }
@@ -113,6 +115,15 @@ final class PlayerManager {
 
     func previous() async { await command("POST", "me/player/previous") }
 
+    func skipBack() async {
+        let threshold = Double(settings.previousRestartSeconds) * 1000
+        if threshold > 0, positionMs(at: Date()) > threshold {
+            await seek(to: 0)
+        } else {
+            await previous()
+        }
+    }
+
     func seek(to ms: Double) async {
         basePositionMs = ms
         baseDate = Date()
@@ -182,8 +193,10 @@ final class PlayerManager {
 
     private func startPlayback(_ body: [String: Any]?) async {
         errorMessage = nil
+        var query: [String: String] = [:]
+        if let device = settings.preferredDeviceID { query["device_id"] = device }
         do {
-            try await api.perform("PUT", "me/player/play", body: body)
+            try await api.perform("PUT", "me/player/play", query: query, body: body)
         } catch let error as APIError where error.status == 404 {
             await playOnFirstDevice(body)
         } catch {
