@@ -60,6 +60,19 @@ struct LikedArtwork: View {
     }
 }
 
+struct IconTile: View {
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 30, height: 30)
+            .background(color.gradient, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+    }
+}
+
 struct MediaRow: View {
     let imageURL: URL?
     let title: String

@@ -190,6 +190,15 @@ final class PlayerManager {
         await command("PUT", "me/player/seek", query: ["position_ms": "\(Int(ms))"])
     }
 
+    func addToQueue(_ uri: String) async {
+        if isSample { return }
+        do {
+            try await api.perform("POST", "me/player/queue", query: ["uri": uri])
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func toggleShuffle() async {
         shuffle.toggle()
         await command("PUT", "me/player/shuffle", query: ["state": shuffle ? "true" : "false"])

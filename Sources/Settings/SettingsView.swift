@@ -25,19 +25,6 @@ struct ProfileButton: View {
     }
 }
 
-private struct SettingsIcon: View {
-    let symbol: String
-    let color: Color
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 30, height: 30)
-            .background(color.gradient, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-    }
-}
-
 private struct SettingsRow<Destination: View>: View {
     let title: String
     let symbol: String
@@ -50,7 +37,7 @@ private struct SettingsRow<Destination: View>: View {
             destination()
         } label: {
             HStack(spacing: 12) {
-                SettingsIcon(symbol: symbol, color: color)
+                IconTile(symbol: symbol, color: color)
                 Text(title)
                 Spacer(minLength: 0)
                 if let value {
@@ -123,7 +110,7 @@ struct SettingsView: View {
                     if let url = URL(string: "spotify://") { UIApplication.shared.open(url) }
                 } label: {
                     HStack(spacing: 12) {
-                        SettingsIcon(symbol: "arrow.up.forward.app.fill", color: .green)
+                        IconTile(symbol: "arrow.up.forward.app.fill", color: .green)
                         Text("Open Spotify")
                     }
                 }
@@ -132,7 +119,7 @@ struct SettingsView: View {
                     auth.signOut()
                 } label: {
                     HStack(spacing: 12) {
-                        SettingsIcon(symbol: "rectangle.portrait.and.arrow.right.fill", color: .red)
+                        IconTile(symbol: "rectangle.portrait.and.arrow.right.fill", color: .red)
                         Text("Sign out")
                     }
                 }

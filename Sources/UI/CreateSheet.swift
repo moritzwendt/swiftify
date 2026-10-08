@@ -1,145 +1,389 @@
 import SwiftUI
 
-struct CreateSheet: View {
-    private enum Mode { case menu, playlist, jam }
+struct SpotifyLink {
+    let type: String
+    let id: String
 
-    @Environment(LibraryStore.self) private var library
+    var uri: String { "spotify:\(type):\(id)" }
+    var isPlayableTrack: Bool { type == "track" || type == "episode" }
+
+    private static let types: Set<String> = ["track", "album", "playlist", "artist", "episode", "show"]
+
+    static func parse(_ text: String) -> SpotifyLink? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("spotify:") {
+            let parts = trimmed.split(separator: ":").map(String.init)
+            guard parts.count >= 3, types.contains(parts[1]) else { return nil }
+            return SpotifyLink(type: parts[1], id: parts[2])
+        }
+        guard let url = URL(string: trimmed), url.host?.contains("spotify.com") == true else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard let index = parts.firstIndex(where: { types.contains($0) }), parts.indices.contains(index + 1) else {
+            return nil
+        }
+        return SpotifyLink(type: parts[index], id: parts[index + 1])
+    }
+}
+
+struct CreateSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var mode: Mode = .menu
-    @State private var name = ""
-    @State private var link = ""
-    @State private var isBusy = false
-    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
-            Group {
-                switch mode {
-                case .menu: menu
-                case .playlist: playlistForm
-                case .jam: jamForm
+            List {
+                Section {
+                    row("New playlist", symbol: "music.note.list", color: .pink) {
+                        NewPlaylistForm(done: { dismiss() })
+                    }
+                    row("Play or queue a link", symbol: "link", color: .blue) {
+                        LinkForm(done: { dismiss() })
+                    }
+                    row("Join a Jam", symbol: "person.2.wave.2.fill", color: .orange) {
+                        JamForm(done: { dismiss() })
+                    }
                 }
-            }
-            .padding(20)
-            .frame(maxHeight: .infinity, alignment: .top)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if mode != .menu {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Back", systemImage: "chevron.left") {
-                            errorMessage = nil
-                            mode = .menu
+
+                Section("Smart playlists") {
+                    ForEach(SmartKind.allCases) { kind in
+                        row(kind.title, symbol: kind.symbol, color: kind.color) {
+                            SmartPlaylistForm(kind: kind, done: { dismiss() })
                         }
                     }
                 }
             }
-        }
-        .presentationDetents([.height(mode == .menu ? 260 : 300)])
-    }
-
-    private var title: String {
-        switch mode {
-        case .menu: "Create"
-        case .playlist: "New playlist"
-        case .jam: "Join a Jam"
-        }
-    }
-
-    private var menu: some View {
-        VStack(spacing: 12) {
-            option("Playlist", symbol: "music.note.list") { mode = .playlist }
-            option("Jam", symbol: "person.2.wave.2.fill") { mode = .jam }
-        }
-    }
-
-    private func option(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Image(systemName: symbol)
-                    .font(.title3)
-                    .frame(width: 28)
-                Text(title)
-                    .font(.headline)
-                Spacer()
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-
-    private var playlistForm: some View {
-        VStack(spacing: 16) {
-            TextField("Playlist name", text: $name)
-                .textFieldStyle(.roundedBorder)
-            errorLabel
-            Button {
-                Task { await createPlaylist() }
-            } label: {
-                Text("Create").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isBusy)
-        }
-    }
-
-    private var jamForm: some View {
-        VStack(spacing: 16) {
-            HStack {
-                TextField("Jam link", text: $link)
-                    .textFieldStyle(.roundedBorder)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Paste") {
-                    link = UIPasteboard.general.string ?? link
+            .navigationTitle("Create")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .close) { dismiss() }
+                        .tint(.primary)
                 }
-                .buttonStyle(.glass)
             }
-            errorLabel
-            Button {
-                joinJam()
-            } label: {
-                Text("Join in Spotify").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .controlSize(.large)
-            .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
         }
+        .presentationDetents([.medium, .large])
     }
 
-    @ViewBuilder
-    private var errorLabel: some View {
-        if let errorMessage {
-            Text(errorMessage)
-                .font(.footnote)
-                .foregroundStyle(.red)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private func row<Destination: View>(
+        _ title: String,
+        symbol: String,
+        color: Color,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            HStack(spacing: 12) {
+                IconTile(symbol: symbol, color: color)
+                Text(title)
+            }
         }
     }
+}
 
-    private func createPlaylist() async {
+struct NewPlaylistForm: View {
+    let done: () -> Void
+    @Environment(LibraryStore.self) private var library
+    @State private var name = ""
+    @State private var details = ""
+    @State private var isPublic = false
+    @State private var isBusy = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Name", text: $name)
+                TextField("Description", text: $details, axis: .vertical)
+                    .lineLimit(1...4)
+            }
+            Section {
+                Toggle("Public", isOn: $isPublic)
+            }
+            Section {
+                Button {
+                    Task { await create() }
+                } label: {
+                    HStack {
+                        Text("Create playlist")
+                        if isBusy { ProgressView() }
+                    }
+                }
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isBusy)
+                if let errorMessage {
+                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                }
+            }
+        }
+        .navigationTitle("New playlist")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func create() async {
         isBusy = true
         errorMessage = nil
         defer { isBusy = false }
+        if library.isSample { return }
         do {
-            try await library.createPlaylist(named: name.trimmingCharacters(in: .whitespaces))
-            dismiss()
+            try await library.createPlaylist(
+                named: name.trimmingCharacters(in: .whitespaces),
+                description: details.trimmingCharacters(in: .whitespacesAndNewlines),
+                isPublic: isPublic
+            )
+            done()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+enum SmartKind: String, CaseIterable, Identifiable {
+    case topSongs, recent, liked
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .topSongs: "From your top songs"
+        case .recent: "From recently played"
+        case .liked: "From Liked Songs"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .topSongs: "chart.bar.fill"
+        case .recent: "clock.fill"
+        case .liked: "heart.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .topSongs: .purple
+        case .recent: .teal
+        case .liked: .red
+        }
+    }
+
+    var defaultName: String {
+        switch self {
+        case .topSongs: "My top songs"
+        case .recent: "Recently played"
+        case .liked: "Liked Songs mix"
+        }
+    }
+
+    var counts: [Int] {
+        switch self {
+        case .topSongs, .recent: [25, 50]
+        case .liked: [50, 100]
+        }
+    }
+}
+
+struct SmartPlaylistForm: View {
+    let kind: SmartKind
+    let done: () -> Void
+    @Environment(LibraryStore.self) private var library
+    @State private var name = ""
+    @State private var range: TopArtistsRange = .mediumTerm
+    @State private var count = 50
+    @State private var isBusy = false
+    @State private var created: Int?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Name", text: $name)
+            }
+            Section {
+                if kind == .topSongs {
+                    Picker("Period", selection: $range) {
+                        ForEach(TopArtistsRange.allCases) { Text($0.title).tag($0) }
+                    }
+                }
+                Picker("Songs", selection: $count) {
+                    ForEach(kind.counts, id: \.self) { Text("\($0)").tag($0) }
+                }
+            }
+            Section {
+                if let created {
+                    Label("\(created) songs added", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.tint)
+                    Button("Done", action: done)
+                } else {
+                    Button {
+                        Task { await create() }
+                    } label: {
+                        HStack {
+                            Text("Create playlist")
+                            if isBusy { ProgressView() }
+                        }
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isBusy)
+                }
+                if let errorMessage {
+                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                }
+            }
+        }
+        .navigationTitle(kind.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if name.isEmpty { name = kind.defaultName }
+            count = kind.counts.last ?? 50
+        }
+        .haptic(.success, trigger: created)
+    }
+
+    private func create() async {
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+        if library.isSample { return }
+        do {
+            let uris = try await fetchURIs()
+            guard !uris.isEmpty else {
+                errorMessage = "No songs found"
+                return
+            }
+            let playlist = try await library.createPlaylist(
+                named: name.trimmingCharacters(in: .whitespaces),
+                description: "Created with Swiftify"
+            )
+            for start in stride(from: 0, to: uris.count, by: 100) {
+                try await library.api.perform(
+                    "POST",
+                    "playlists/\(playlist.id)/items",
+                    body: ["uris": Array(uris[start..<min(start + 100, uris.count)])]
+                )
+            }
+            created = uris.count
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    private func joinJam() {
-        let trimmed = link.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.contains("socialsession"), let url = URL(string: trimmed) else {
-            errorMessage = "That is not a Jam link"
-            return
+    private func fetchURIs() async throws -> [String] {
+        switch kind {
+        case .topSongs:
+            let page: Page<Track> = try await library.api.get(
+                "me/top/tracks",
+                query: ["limit": "\(count)", "time_range": range.rawValue]
+            )
+            return page.items.map(\.uri)
+        case .recent:
+            let page: Page<PlayHistory> = try await library.api.get(
+                "me/player/recently-played",
+                query: ["limit": "\(count)"]
+            )
+            var seen = Set<String>()
+            return page.items.compactMap(\.track?.uri).filter { seen.insert($0).inserted }
+        case .liked:
+            var result: [String] = []
+            var offset = 0
+            while result.count < count {
+                let page: Page<SavedTrack> = try await library.api.get(
+                    "me/tracks",
+                    query: ["limit": "50", "offset": "\(offset)"]
+                )
+                result += page.items.map(\.track.uri)
+                if page.next == nil || page.items.isEmpty { break }
+                offset += 50
+            }
+            return Array(result.prefix(count))
         }
-        UIApplication.shared.open(url)
-        dismiss()
+    }
+}
+
+struct LinkForm: View {
+    let done: () -> Void
+    @Environment(PlayerManager.self) private var player
+    @State private var link = ""
+    @State private var errorMessage: String?
+
+    private var parsed: SpotifyLink? { SpotifyLink.parse(link) }
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Spotify link", text: $link)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Paste") {
+                    link = UIPasteboard.general.string ?? link
+                }
+            }
+            Section {
+                Button("Play") {
+                    guard let parsed else {
+                        errorMessage = "That is not a Spotify link"
+                        return
+                    }
+                    Task {
+                        if parsed.isPlayableTrack {
+                            await player.play(uris: [parsed.uri])
+                        } else {
+                            await player.play(context: parsed.uri)
+                        }
+                        done()
+                    }
+                }
+                .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button("Add to queue") {
+                    guard let parsed, parsed.isPlayableTrack else {
+                        errorMessage = "Only songs and episodes can be queued"
+                        return
+                    }
+                    Task {
+                        await player.addToQueue(parsed.uri)
+                        done()
+                    }
+                }
+                .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
+                if let errorMessage {
+                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                }
+            }
+        }
+        .navigationTitle("Play or queue a link")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct JamForm: View {
+    let done: () -> Void
+    @State private var link = ""
+    @State private var errorMessage: String?
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Jam link", text: $link)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Paste") {
+                    link = UIPasteboard.general.string ?? link
+                }
+            }
+            Section {
+                Button("Join in Spotify") {
+                    let trimmed = link.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard trimmed.contains("socialsession"), let url = URL(string: trimmed) else {
+                        errorMessage = "That is not a Jam link"
+                        return
+                    }
+                    UIApplication.shared.open(url)
+                    done()
+                }
+                .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
+                if let errorMessage {
+                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                }
+            }
+        }
+        .navigationTitle("Join a Jam")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

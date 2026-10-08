@@ -143,8 +143,10 @@ final class LibraryStore {
     }
 
     @discardableResult
-    func createPlaylist(named name: String) async throws -> Playlist {
-        let created: Playlist = try await api.post("me/playlists", body: ["name": name, "public": false])
+    func createPlaylist(named name: String, description: String = "", isPublic: Bool = false) async throws -> Playlist {
+        var body: [String: Any] = ["name": name, "public": isPublic]
+        if !description.isEmpty { body["description"] = description }
+        let created: Playlist = try await api.post("me/playlists", body: body)
         playlists.insert(created, at: 0)
         return created
     }
