@@ -175,8 +175,14 @@ struct PlaylistsResponse: Decodable {
     let items: [Playlist]
 }
 
+struct PlayerContext: Decodable {
+    let uri: String?
+    let type: String?
+}
+
 struct PlayerStateResponse: Decodable {
     let isPlaying: Bool
+    let context: PlayerContext?
     let progressMs: Int?
     let shuffleState: Bool?
     let repeatState: String?

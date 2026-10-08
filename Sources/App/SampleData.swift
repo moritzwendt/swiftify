@@ -23,6 +23,6 @@ enum SampleData {
         }
         library.loadSample(me: me, playlists: playlists, albums: albums, artists: artists, likedTotal: 482)
         let track: Track = decode(#"{"uri":"spotify:track:t1","name":"The Less I Know The Better","artists":[{"name":"Tame Impala"}],"duration_ms":216000}"#)
-        player.loadSample(track: track, positionMs: 64000)
+        player.loadSample(track: track, positionMs: 64000, context: "spotify:playlist:p0")
     }
 }

@@ -6,6 +6,7 @@ struct DetailHeader: View {
     var circle = false
     let title: String
     let subtitle: String
+    let isPlaying: Bool
     let onPlay: () -> Void
 
     var body: some View {
@@ -29,7 +30,7 @@ struct DetailHeader: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            PlayButton(action: onPlay)
+            PlayButton(isPlaying: isPlaying, action: onPlay)
                 .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
@@ -60,9 +61,10 @@ struct PlaylistDetailView: View {
                 DetailHeader(
                     imageURL: playlist.images.url(atLeast: 640),
                     title: playlist.name,
-                    subtitle: subtitle
+                    subtitle: subtitle,
+                    isPlaying: player.isPlaying(context: playlist.uri)
                 ) {
-                    Task { await player.play(context: playlist.uri) }
+                    Task { await player.playOrPause(context: playlist.uri) }
                 }
 
                 if canList {
@@ -122,9 +124,10 @@ struct AlbumDetailView: View {
                 DetailHeader(
                     imageURL: album.images.url(atLeast: 640),
                     title: album.name,
-                    subtitle: subtitle
+                    subtitle: subtitle,
+                    isPlaying: player.isPlaying(context: album.uri)
                 ) {
-                    Task { await player.play(context: album.uri) }
+                    Task { await player.playOrPause(context: album.uri) }
                 }
                 ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                     Button {
@@ -163,9 +166,10 @@ struct ArtistDetailView: View {
                     imageURL: artist.images.url(atLeast: 640),
                     circle: true,
                     title: artist.name,
-                    subtitle: ""
+                    subtitle: "",
+                    isPlaying: player.isPlaying(context: artist.uri)
                 ) {
-                    Task { await player.play(context: artist.uri) }
+                    Task { await player.playOrPause(context: artist.uri) }
                 }
                 if !albums.isEmpty {
                     Text("Albums")
@@ -208,6 +212,8 @@ struct ArtistDetailView: View {
 }
 
 struct LikedSongsView: View {
+    static let contextKey = "liked-songs"
+
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
     @State private var tracks: [Track] = []
@@ -222,13 +228,14 @@ struct LikedSongsView: View {
                     imageURL: nil,
                     liked: true,
                     title: "Liked Songs",
-                    subtitle: "\(library.likedTotal) songs"
+                    subtitle: "\(library.likedTotal) songs",
+                    isPlaying: player.isPlaying(context: Self.contextKey)
                 ) {
-                    Task { await player.play(uris: tracks.map(\.uri)) }
+                    Task { await player.playOrPause(uris: tracks.map(\.uri), key: Self.contextKey) }
                 }
                 ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                     Button {
-                        Task { await player.play(uris: tracks.map(\.uri), startAt: index) }
+                        Task { await player.play(uris: tracks.map(\.uri), startAt: index, key: Self.contextKey) }
                     } label: {
                         TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                     }

@@ -11,6 +11,9 @@ final class PlayerManager {
     private(set) var deviceName: String?
     private(set) var isLiked = false
     private(set) var errorMessage: String?
+    private(set) var contextURI: String?
+    @ObservationIgnored private var localContextKey: String?
+    @ObservationIgnored private var localContextURIs: Set<String> = []
 
     @ObservationIgnored private var basePositionMs: Double = 0
     @ObservationIgnored private var baseDate = Date()
@@ -37,6 +40,32 @@ final class PlayerManager {
 
     func clearError() { errorMessage = nil }
 
+    func isActive(context key: String) -> Bool {
+        if contextURI == key { return true }
+        guard localContextKey == key, let uri = track?.uri else { return false }
+        return localContextURIs.contains(uri)
+    }
+
+    func isPlaying(context key: String) -> Bool {
+        isPlaying && isActive(context: key)
+    }
+
+    func playOrPause(context uri: String) async {
+        if isActive(context: uri) {
+            await togglePlay()
+        } else {
+            await play(context: uri)
+        }
+    }
+
+    func playOrPause(uris: [String], key: String) async {
+        if isActive(context: key) {
+            await togglePlay()
+        } else {
+            await play(uris: uris, key: key)
+        }
+    }
+
     func startPolling() {
         guard !isSample, pollTask == nil else { return }
         pollTask = Task { [weak self] in
@@ -60,8 +89,9 @@ final class PlayerManager {
         isPlaying = false
     }
 
-    func loadSample(track: Track, positionMs: Double) {
+    func loadSample(track: Track, positionMs: Double, context: String?) {
         isSample = true
+        contextURI = context
         self.track = track
         isPlaying = true
         basePositionMs = positionMs
@@ -87,12 +117,18 @@ final class PlayerManager {
     func play(context: String, offset: String? = nil) async {
         var body: [String: Any] = ["context_uri": context]
         if let offset { body["offset"] = ["uri": offset] }
+        localContextKey = nil
+        contextURI = context
         await startPlayback(body)
     }
 
-    func play(uris: [String], startAt index: Int = 0) async {
+    func play(uris: [String], startAt index: Int = 0, key: String? = nil) async {
         guard index < uris.count else { return }
-        await startPlayback(["uris": Array(uris[index...].prefix(100))])
+        let queue = Array(uris[index...].prefix(100))
+        localContextKey = key
+        localContextURIs = Set(queue)
+        contextURI = nil
+        await startPlayback(["uris": queue])
     }
 
     func togglePlay() async {
@@ -162,6 +198,12 @@ final class PlayerManager {
             Task { await refreshLiked() }
         }
         isPlaying = state.isPlaying
+        if let uri = state.context?.uri {
+            contextURI = uri
+            localContextKey = nil
+        } else {
+            contextURI = nil
+        }
         basePositionMs = Double(state.progressMs ?? 0)
         baseDate = Date()
         shuffle = state.shuffleState ?? false

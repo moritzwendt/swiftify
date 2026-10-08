@@ -169,15 +169,16 @@ struct ShelfCard: View {
 
 struct PlayButton: View {
     @Environment(AppSettings.self) private var settings
-    var title = "Play"
+    let isPlaying: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Label(title, systemImage: "play.fill")
+            Label(isPlaying ? "Pause" : "Play", systemImage: isPlaying ? "pause.fill" : "play.fill")
                 .font(.headline)
                 .foregroundStyle(settings.onAccent)
                 .padding(.horizontal, 12)
+                .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.glassProminent)
         .controlSize(.large)
