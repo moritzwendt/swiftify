@@ -141,6 +141,10 @@ final class AppSettings {
         didSet { Self.defaults.set(librarySortRaw, forKey: "settings.librarySort") }
     }
 
+    var libraryGrid: Bool {
+        didSet { Self.defaults.set(libraryGrid, forKey: "settings.libraryGrid") }
+    }
+
     var showLikedSongsRow: Bool {
         didSet { Self.defaults.set(showLikedSongsRow, forKey: "settings.showLikedSongsRow") }
     }
@@ -171,6 +175,7 @@ final class AppSettings {
         homeQuickCount = defaults.object(forKey: "settings.homeQuickCount") as? Int ?? 6
         topArtistsRange = TopArtistsRange(rawValue: defaults.string(forKey: "settings.topArtistsRange") ?? "") ?? .mediumTerm
         librarySortRaw = defaults.string(forKey: "settings.librarySort") ?? "Recents"
+        libraryGrid = defaults.object(forKey: "settings.libraryGrid") as? Bool ?? false
         showLikedSongsRow = defaults.object(forKey: "settings.showLikedSongsRow") as? Bool ?? true
         previousRestartSeconds = defaults.object(forKey: "settings.previousRestartSeconds") as? Int ?? 3
         preferredDeviceID = defaults.string(forKey: "settings.preferredDeviceID")
@@ -194,6 +199,7 @@ final class AppSettings {
         homeQuickCount = 6
         topArtistsRange = .mediumTerm
         librarySortRaw = "Recents"
+        libraryGrid = false
         showLikedSongsRow = true
         previousRestartSeconds = 3
         preferredDeviceID = nil

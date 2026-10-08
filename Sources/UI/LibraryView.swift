@@ -28,6 +28,7 @@ struct LibraryItem: Identifiable {
     let route: Route
     let circle: Bool
     let markable: Bool
+    let kind: String
 }
 
 struct LibraryView: View {
@@ -63,7 +64,8 @@ struct LibraryView: View {
                         imageURL: playlist.images.url(atLeast: 100),
                         route: .playlist(playlist),
                         circle: false,
-                        markable: true
+                        markable: true,
+                        kind: "Playlist"
                     )
                 }
         }
@@ -77,7 +79,8 @@ struct LibraryView: View {
                     imageURL: saved.album.images.url(atLeast: 100),
                     route: .album(saved.album),
                     circle: false,
-                    markable: true
+                    markable: true,
+                    kind: "Album"
                 )
             }
         }
@@ -91,7 +94,8 @@ struct LibraryView: View {
                     imageURL: artist.images.url(atLeast: 100),
                     route: .artist(artist),
                     circle: true,
-                    markable: false
+                    markable: false,
+                    kind: "Artist"
                 )
             }
         }
@@ -119,67 +123,19 @@ struct LibraryView: View {
         return pinnedItems + sorted.filter { !pins.contains($0.id) }
     }
 
+    private var showLiked: Bool {
+        settings.showLikedSongsRow && (sub == nil || sub == .byYou) && (filter == nil || filter == .playlists)
+    }
+
     var body: some View {
         NavigationStack {
-            List {
-                if settings.showLikedSongsRow && (sub == nil || sub == .byYou) && (filter == nil || filter == .playlists) {
-                    NavigationLink(value: Route.likedSongs) {
-                        MediaRow(
-                            imageURL: nil,
-                            title: "Liked Songs",
-                            subtitle: "Playlist \u{2022} \(library.likedTotal) songs",
-                            liked: true
-                        )
-                    }
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                    .navigationLinkIndicatorVisibility(.hidden)
-                }
-
-                ForEach(items) { item in
-                    NavigationLink(value: item.route) {
-                        MediaRow(
-                            imageURL: item.imageURL,
-                            title: item.title,
-                            subtitle: item.subtitle,
-                            circle: item.circle,
-                            badge: library.isDownloaded(item.id),
-                            pinned: library.isPinned(item.id)
-                        )
-                    }
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                    .navigationLinkIndicatorVisibility(.hidden)
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            withAnimation(.snappy) { library.togglePin(item.id) }
-                        } label: {
-                            Label(
-                                library.isPinned(item.id) ? "Unpin" : "Pin",
-                                systemImage: library.isPinned(item.id) ? "pin.slash.fill" : "pin.fill"
-                            )
-                        }
-                        .tint(settings.accent)
-                    }
-                    .contextMenu {
-                        Button(
-                            library.isPinned(item.id) ? "Unpin" : "Pin",
-                            systemImage: library.isPinned(item.id) ? "pin.slash" : "pin"
-                        ) {
-                            withAnimation(.snappy) { library.togglePin(item.id) }
-                        }
-                        if item.markable {
-                            Button(
-                                library.isDownloaded(item.id) ? "Remove download mark" : "Mark as downloaded",
-                                systemImage: "arrow.down.circle"
-                            ) {
-                                library.toggleDownloaded(item.id)
-                            }
-                        }
-                    }
+            Group {
+                if settings.libraryGrid {
+                    gridContent
+                } else {
+                    listContent
                 }
             }
-            .listStyle(.plain)
             .safeAreaBar(edge: .top, spacing: 0) { header }
             .navigationTitle("Your Library")
             .navigationBarTitleDisplayMode(.inline)
@@ -189,7 +145,6 @@ struct LibraryView: View {
             .appDestinations()
             .haptic(.success, trigger: library.pinned)
             .task { await library.load() }
-            .refreshable { await library.load(force: true) }
             .onChange(of: player.contextURI) { _, uri in
                 if let uri { library.noteRecent(uri) }
             }
@@ -207,15 +162,151 @@ struct LibraryView: View {
         }
     }
 
+    private var listContent: some View {
+        List {
+            sortRow
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
+
+            if showLiked {
+                NavigationLink(value: Route.likedSongs) {
+                    MediaRow(
+                        imageURL: nil,
+                        title: "Liked Songs",
+                        subtitle: "Playlist \u{2022} \(library.likedTotal) songs",
+                        liked: true
+                    )
+                }
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                .navigationLinkIndicatorVisibility(.hidden)
+            }
+
+            ForEach(items) { item in
+                NavigationLink(value: item.route) {
+                    MediaRow(
+                        imageURL: item.imageURL,
+                        title: item.title,
+                        subtitle: item.subtitle,
+                        circle: item.circle,
+                        badge: library.isDownloaded(item.id),
+                        pinned: library.isPinned(item.id)
+                    )
+                }
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                .navigationLinkIndicatorVisibility(.hidden)
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button {
+                        withAnimation(.snappy) { library.togglePin(item.id) }
+                    } label: {
+                        Label(
+                            library.isPinned(item.id) ? "Unpin" : "Pin",
+                            systemImage: library.isPinned(item.id) ? "pin.slash.fill" : "pin.fill"
+                        )
+                    }
+                    .tint(settings.accent)
+                }
+                .contextMenu { menuItems(item) }
+            }
+        }
+        .listStyle(.plain)
+        .refreshable { await library.load(force: true) }
+    }
+
+    private var gridContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                sortRow
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 16) {
+                    if showLiked {
+                        NavigationLink(value: Route.likedSongs) {
+                            gridCell(imageURL: nil, title: "Liked Songs", kind: "Playlist", liked: true)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    ForEach(items) { item in
+                        NavigationLink(value: item.route) {
+                            gridCell(
+                                imageURL: item.imageURL,
+                                title: item.title,
+                                kind: item.kind,
+                                circle: item.circle,
+                                pinned: library.isPinned(item.id),
+                                downloaded: library.isDownloaded(item.id)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu { menuItems(item) }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+        }
+        .refreshable { await library.load(force: true) }
+    }
+
+    private func gridCell(
+        imageURL: URL?,
+        title: String,
+        kind: String,
+        liked: Bool = false,
+        circle: Bool = false,
+        pinned: Bool = false,
+        downloaded: Bool = false
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Group {
+                if liked {
+                    LikedArtwork()
+                } else {
+                    ArtworkView(url: imageURL, circle: circle)
+                }
+            }
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+            HStack(spacing: 4) {
+                if pinned {
+                    Image(systemName: "pin.fill").foregroundStyle(.tint)
+                }
+                if downloaded {
+                    Image(systemName: "arrow.down.circle.fill").foregroundStyle(.tint)
+                }
+                Text(kind)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func menuItems(_ item: LibraryItem) -> some View {
+        Button(
+            library.isPinned(item.id) ? "Unpin" : "Pin",
+            systemImage: library.isPinned(item.id) ? "pin.slash" : "pin"
+        ) {
+            withAnimation(.snappy) { library.togglePin(item.id) }
+        }
+        if item.markable {
+            Button(
+                library.isDownloaded(item.id) ? "Remove download mark" : "Mark as downloaded",
+                systemImage: "arrow.down.circle"
+            ) {
+                library.toggleDownloaded(item.id)
+            }
+        }
+    }
+
     private var marked: Bool { filter == .downloaded || sub == .downloaded }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            chips
-            sortRow
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 4)
+        chips
+            .padding(.horizontal, 16)
     }
 
     private var chips: some View {
@@ -302,6 +393,16 @@ struct LibraryView: View {
             }
             .tint(.primary)
             Spacer()
+            Button {
+                withAnimation(.snappy) { settings.libraryGrid.toggle() }
+            } label: {
+                Image(systemName: settings.libraryGrid ? "list.bullet" : "square.grid.2x2")
+                    .font(.body.weight(.medium))
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.borderless)
+            .tint(.primary)
+            .accessibilityLabel(settings.libraryGrid ? "List layout" : "Grid layout")
         }
     }
 }

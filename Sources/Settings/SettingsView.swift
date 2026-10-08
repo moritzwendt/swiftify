@@ -77,6 +77,7 @@ struct SettingsView: View {
                 Picker("Sort", selection: sortBinding) {
                     ForEach(LibrarySort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
+                Toggle("Grid layout", isOn: $settings.libraryGrid)
                 Toggle("Show Liked Songs", isOn: $settings.showLikedSongsRow)
                 Button("Clear download marks", role: .destructive) { confirmClearMarks = true }
                 Button("Clear pins", role: .destructive) { confirmClearPins = true }
