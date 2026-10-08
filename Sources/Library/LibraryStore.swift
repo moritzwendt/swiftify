@@ -12,6 +12,7 @@ final class LibraryStore {
     private(set) var isLoading = false
     private(set) var hasLoaded = false
     private(set) var downloaded: Set<String>
+    private(set) var recentOrder: [String] = []
 
     @ObservationIgnored let api: SpotifyAPI
     @ObservationIgnored var isSample = false
@@ -35,16 +36,27 @@ final class LibraryStore {
         async let albumResult: [SavedAlbum] = pages("me/albums")
         async let artistResult: [Artist] = followedArtists()
         async let likedResult: Page<SavedTrack>? = try? api.get("me/tracks", query: ["limit": "1"])
+        async let historyResult: Page<PlayHistory>? = try? api.get("me/player/recently-played", query: ["limit": "50"])
         let loadedMe = await meResult
         let loadedPlaylists = await playlistResult
         let loadedAlbums = await albumResult
         let loadedArtists = await artistResult
         let loadedLiked = await likedResult
+        let loadedHistory = await historyResult
         if let loadedMe { me = loadedMe }
         playlists = loadedPlaylists
         albums = loadedAlbums
         artists = loadedArtists
         likedTotal = loadedLiked?.total ?? likedTotal
+        var seen = Set<String>()
+        recentOrder = (loadedHistory?.items ?? [])
+            .compactMap { $0.context?.uri }
+            .filter { seen.insert($0).inserted }
+    }
+
+    func noteRecent(_ uri: String) {
+        recentOrder.removeAll { $0 == uri }
+        recentOrder.insert(uri, at: 0)
     }
 
     func reset() {
@@ -53,6 +65,7 @@ final class LibraryStore {
         albums = []
         artists = []
         likedTotal = 0
+        recentOrder = []
         hasLoaded = false
     }
 

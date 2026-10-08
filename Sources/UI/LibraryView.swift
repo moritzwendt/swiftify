@@ -7,6 +7,12 @@ enum LibraryFilter: String, CaseIterable {
     case downloaded = "Downloaded"
 }
 
+enum LibrarySubFilter: String {
+    case byYou = "By you"
+    case bySpotify = "By Spotify"
+    case downloaded = "Downloaded"
+}
+
 enum LibrarySort: String, CaseIterable {
     case recents = "Recents"
     case alphabetical = "Alphabetical"
@@ -27,7 +33,10 @@ struct LibraryItem: Identifiable {
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
+    @Environment(PlayerManager.self) private var player
+    @Namespace private var chipSpace
     @State private var filter: LibraryFilter?
+    @State private var sub: LibrarySubFilter?
 
     private var sort: LibrarySort {
         get { LibrarySort(rawValue: settings.librarySortRaw) ?? .recents }
@@ -36,21 +45,30 @@ struct LibraryView: View {
 
     private var items: [LibraryItem] {
         var all: [LibraryItem] = []
+        let marked = filter == .downloaded || sub == .downloaded
         if filter == nil || filter == .playlists || filter == .downloaded {
-            all += library.playlists.map { playlist in
-                LibraryItem(
-                    id: playlist.uri,
-                    title: playlist.name,
-                    subtitle: "Playlist \u{2022} \(playlist.owner?.displayName ?? "Spotify")",
-                    creator: playlist.owner?.displayName ?? "",
-                    imageURL: playlist.images.url(atLeast: 100),
-                    route: .playlist(playlist),
-                    circle: false,
-                    markable: true
-                )
-            }
+            all += library.playlists
+                .filter { playlist in
+                    switch sub {
+                    case .byYou: playlist.owner?.id == library.me?.id
+                    case .bySpotify: playlist.owner?.id == "spotify"
+                    default: true
+                    }
+                }
+                .map { playlist in
+                    LibraryItem(
+                        id: playlist.uri,
+                        title: playlist.name,
+                        subtitle: "Playlist \u{2022} \(playlist.owner?.displayName ?? "Spotify")",
+                        creator: playlist.owner?.displayName ?? "",
+                        imageURL: playlist.images.url(atLeast: 100),
+                        route: .playlist(playlist),
+                        circle: false,
+                        markable: true
+                    )
+                }
         }
-        if filter == nil || filter == .albums || filter == .downloaded {
+        if sub == nil || sub == .downloaded, filter == nil || filter == .albums || filter == .downloaded {
             all += library.albums.map { saved in
                 LibraryItem(
                     id: saved.album.uri,
@@ -64,7 +82,7 @@ struct LibraryView: View {
                 )
             }
         }
-        if filter == nil || filter == .artists {
+        if sub == nil, filter == nil || filter == .artists {
             all += library.artists.map { artist in
                 LibraryItem(
                     id: artist.uri,
@@ -78,29 +96,30 @@ struct LibraryView: View {
                 )
             }
         }
-        if filter == .downloaded {
+        if marked {
             all = all.filter { library.isDownloaded($0.id) }
         }
         switch sort {
-        case .recents: return all
-        case .alphabetical: return all.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-        case .creator: return all.sorted { $0.creator.localizedCaseInsensitiveCompare($1.creator) == .orderedAscending }
+        case .recents:
+            let rank = Dictionary(uniqueKeysWithValues: library.recentOrder.enumerated().map { ($1, $0) })
+            return all.enumerated()
+                .sorted { lhs, rhs in
+                    let left = rank[lhs.element.id] ?? Int.max
+                    let right = rank[rhs.element.id] ?? Int.max
+                    return left == right ? lhs.offset < rhs.offset : left < right
+                }
+                .map(\.element)
+        case .alphabetical:
+            return all.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .creator:
+            return all.sorted { $0.creator.localizedCaseInsensitiveCompare($1.creator) == .orderedAscending }
         }
     }
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    chips
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                    sortRow
-                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
-                }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-
-                if settings.showLikedSongsRow && (filter == nil || filter == .playlists) {
+                if settings.showLikedSongsRow && sub == nil && (filter == nil || filter == .playlists) {
                     NavigationLink(value: Route.likedSongs) {
                         MediaRow(
                             imageURL: nil,
@@ -138,6 +157,7 @@ struct LibraryView: View {
                 }
             }
             .listStyle(.plain)
+            .safeAreaBar(edge: .top, spacing: 0) { header }
             .navigationTitle("Your Library")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -146,50 +166,102 @@ struct LibraryView: View {
             .appDestinations()
             .task { await library.load() }
             .refreshable { await library.load(force: true) }
+            .onChange(of: player.contextURI) { _, uri in
+                if let uri { library.noteRecent(uri) }
+            }
             .overlay {
                 if library.isLoading && library.playlists.isEmpty {
                     ProgressView()
+                } else if items.isEmpty && filter != nil {
+                    ContentUnavailableView(
+                        "Nothing here",
+                        systemImage: "tray",
+                        description: Text(marked ? "Touch and hold an item to mark it as downloaded" : "")
+                    )
                 }
             }
         }
+    }
+
+    private var marked: Bool { filter == .downloaded || sub == .downloaded }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            chips
+            sortRow
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 4)
     }
 
     private var chips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
-                    if let selected = filter {
+                    if filter != nil {
                         Button {
-                            withAnimation(.snappy) { filter = nil }
+                            select(nil)
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.subheadline.weight(.semibold))
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 6)
+                                .foregroundStyle(.primary)
+                                .frame(width: 20, height: 20)
+                                .padding(9)
                         }
-                        .buttonStyle(.glass)
-                        chip(selected)
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive(), in: .circle)
+                        .glassEffectID("clear", in: chipSpace)
+                        .accessibilityLabel("Clear filter")
+                    }
+                    if let filter {
+                        chip(filter.rawValue, id: filter.rawValue, selected: true) {}
+                        ForEach(subFilters(for: filter), id: \.rawValue) { value in
+                            chip(value.rawValue, id: "sub-\(value.rawValue)", selected: sub == value) {
+                                withAnimation(.bouncy) { sub = sub == value ? nil : value }
+                            }
+                        }
                     } else {
-                        ForEach(LibraryFilter.allCases, id: \.self) { chip($0) }
+                        ForEach(LibraryFilter.allCases, id: \.self) { value in
+                            chip(value.rawValue, id: value.rawValue, selected: false) { select(value) }
+                        }
                     }
                 }
+                .padding(.vertical, 4)
             }
+        }
+        .scrollClipDisabled()
+        .frame(height: 52)
+    }
+
+    private func subFilters(for filter: LibraryFilter) -> [LibrarySubFilter] {
+        switch filter {
+        case .playlists: [.byYou, .bySpotify, .downloaded]
+        case .albums: [.downloaded]
+        default: []
         }
     }
 
-    private func chip(_ value: LibraryFilter) -> some View {
-        let selected = filter == value
-        return Button {
-            withAnimation(.snappy) { filter = value }
-        } label: {
-            Text(value.rawValue)
+    private func select(_ value: LibraryFilter?) {
+        withAnimation(.bouncy) {
+            filter = value
+            sub = nil
+        }
+    }
+
+    private func chip(_ title: String, id: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(selected ? settings.onAccent : .primary)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
         }
-        .buttonStyle(.glass)
-        .tint(selected ? settings.accent : nil)
+        .buttonStyle(.plain)
+        .glassEffect(
+            selected ? .regular.tint(settings.accent).interactive() : .regular.interactive(),
+            in: .capsule
+        )
+        .glassEffectID(id, in: chipSpace)
     }
 
     private var sortRow: some View {

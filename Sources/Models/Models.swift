@@ -147,6 +147,7 @@ struct PlaylistItem: Decodable {
 struct PlayHistory: Decodable {
     let track: Track?
     let playedAt: String?
+    let context: PlayerContext?
 }
 
 struct FollowedResponse: Decodable {

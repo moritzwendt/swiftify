@@ -12,7 +12,7 @@ enum SampleData {
         let me: Me = decode(#"{"id":"me","display_name":"Moritz"}"#)
         let names = ["Daily Mix 1", "Late Night Drive", "Gym Energy", "Focus Flow", "Road Trip", "Sunday Jazz", "Indie Gems"]
         let playlists: [Playlist] = names.enumerated().map { index, name in
-            decode(#"{"id":"p\#(index)","uri":"spotify:playlist:p\#(index)","name":"\#(name)","owner":{"id":"me","display_name":"Moritz"},"items":{"total":\#(20 + index)}}"#)
+            decode(#"{"id":"p\#(index)","uri":"spotify:playlist:p\#(index)","name":"\#(name)","owner":{"id":"\#(index % 3 == 0 ? "spotify" : "me")","display_name":"\#(index % 3 == 0 ? "Spotify" : "Moritz")"},"items":{"total":\#(20 + index)}}"#)
         }
         let albumNames = ["Currents", "Random Access Memories", "Blonde", "Discovery"]
         let albums: [SavedAlbum] = albumNames.enumerated().map { index, name in
