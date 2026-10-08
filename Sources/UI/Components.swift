@@ -66,6 +66,7 @@ struct MediaRow: View {
     var circle = false
     var liked = false
     var badge = false
+    var pinned = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -81,10 +82,17 @@ struct MediaRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .lineLimit(1)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    if pinned {
+                        Image(systemName: "pin.fill")
+                            .font(.caption)
+                            .foregroundStyle(.tint)
+                    }
+                    Text(subtitle)
+                        .lineLimit(1)
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
             if badge {

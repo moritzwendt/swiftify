@@ -13,15 +13,18 @@ final class LibraryStore {
     private(set) var hasLoaded = false
     private(set) var downloaded: Set<String>
     private(set) var recentOrder: [String] = []
+    private(set) var pinned: [String]
 
     @ObservationIgnored let api: SpotifyAPI
     @ObservationIgnored var isSample = false
 
     private static let downloadedKey = "downloadedMarks"
+    private static let pinnedKey = "pinnedItems"
 
     init(api: SpotifyAPI) {
         self.api = api
         downloaded = Set(UserDefaults.standard.stringArray(forKey: Self.downloadedKey) ?? [])
+        pinned = UserDefaults.standard.stringArray(forKey: Self.pinnedKey) ?? []
     }
 
     func load(force: Bool = false) async {
@@ -84,6 +87,22 @@ final class LibraryStore {
             downloaded.insert(uri)
         }
         UserDefaults.standard.set(Array(downloaded), forKey: Self.downloadedKey)
+    }
+
+    func isPinned(_ uri: String) -> Bool { pinned.contains(uri) }
+
+    func togglePin(_ uri: String) {
+        if let index = pinned.firstIndex(of: uri) {
+            pinned.remove(at: index)
+        } else {
+            pinned.insert(uri, at: 0)
+        }
+        UserDefaults.standard.set(pinned, forKey: Self.pinnedKey)
+    }
+
+    func clearPins() {
+        pinned = []
+        UserDefaults.standard.removeObject(forKey: Self.pinnedKey)
     }
 
     func clearDownloaded() {

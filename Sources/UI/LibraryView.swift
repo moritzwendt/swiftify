@@ -99,10 +99,11 @@ struct LibraryView: View {
         if marked {
             all = all.filter { library.isDownloaded($0.id) }
         }
+        let sorted: [LibraryItem]
         switch sort {
         case .recents:
             let rank = Dictionary(uniqueKeysWithValues: library.recentOrder.enumerated().map { ($1, $0) })
-            return all.enumerated()
+            sorted = all.enumerated()
                 .sorted { lhs, rhs in
                     let left = rank[lhs.element.id] ?? Int.max
                     let right = rank[rhs.element.id] ?? Int.max
@@ -110,10 +111,13 @@ struct LibraryView: View {
                 }
                 .map(\.element)
         case .alphabetical:
-            return all.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            sorted = all.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         case .creator:
-            return all.sorted { $0.creator.localizedCaseInsensitiveCompare($1.creator) == .orderedAscending }
+            sorted = all.sorted { $0.creator.localizedCaseInsensitiveCompare($1.creator) == .orderedAscending }
         }
+        let pins = library.pinned
+        let pinnedItems = pins.compactMap { id in sorted.first { $0.id == id } }
+        return pinnedItems + sorted.filter { !pins.contains($0.id) }
     }
 
     var body: some View {
@@ -139,12 +143,30 @@ struct LibraryView: View {
                             title: item.title,
                             subtitle: item.subtitle,
                             circle: item.circle,
-                            badge: library.isDownloaded(item.id)
+                            badge: library.isDownloaded(item.id),
+                            pinned: library.isPinned(item.id)
                         )
                     }
                     .listRowSeparator(.hidden)
                     .navigationLinkIndicatorVisibility(.hidden)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            withAnimation(.snappy) { library.togglePin(item.id) }
+                        } label: {
+                            Label(
+                                library.isPinned(item.id) ? "Unpin" : "Pin",
+                                systemImage: library.isPinned(item.id) ? "pin.slash.fill" : "pin.fill"
+                            )
+                        }
+                        .tint(settings.accent)
+                    }
                     .contextMenu {
+                        Button(
+                            library.isPinned(item.id) ? "Unpin" : "Pin",
+                            systemImage: library.isPinned(item.id) ? "pin.slash" : "pin"
+                        ) {
+                            withAnimation(.snappy) { library.togglePin(item.id) }
+                        }
                         if item.markable {
                             Button(
                                 library.isDownloaded(item.id) ? "Remove download mark" : "Mark as downloaded",
@@ -164,6 +186,7 @@ struct LibraryView: View {
                 ToolbarItem(placement: .topBarTrailing) { ProfileButton() }
             }
             .appDestinations()
+            .haptic(.success, trigger: library.pinned)
             .task { await library.load() }
             .refreshable { await library.load(force: true) }
             .onChange(of: player.contextURI) { _, uri in

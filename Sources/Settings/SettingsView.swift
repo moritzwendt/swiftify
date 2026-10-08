@@ -36,6 +36,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var devices: [SpotifyDevice] = []
     @State private var confirmClearMarks = false
+    @State private var confirmClearPins = false
     @State private var confirmReset = false
 
     private var sortBinding: Binding<LibrarySort> {
@@ -84,6 +85,7 @@ struct SettingsView: View {
                     }
                     Toggle("Show Liked Songs", isOn: $settings.showLikedSongsRow)
                     Button("Clear download marks", role: .destructive) { confirmClearMarks = true }
+                    Button("Clear pins", role: .destructive) { confirmClearPins = true }
                 }
                 Section("Playback") {
                     Picker("Device", selection: deviceBinding) {
@@ -138,6 +140,9 @@ struct SettingsView: View {
             .task { await loadDevices() }
             .confirmationDialog("Clear download marks", isPresented: $confirmClearMarks, titleVisibility: .visible) {
                 Button("Clear", role: .destructive) { library.clearDownloaded() }
+            }
+            .confirmationDialog("Clear pins", isPresented: $confirmClearPins, titleVisibility: .visible) {
+                Button("Clear", role: .destructive) { library.clearPins() }
             }
             .confirmationDialog("Reset all settings", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("Reset", role: .destructive) { settings.reset() }
