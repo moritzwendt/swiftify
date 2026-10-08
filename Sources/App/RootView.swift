@@ -19,10 +19,11 @@ struct RootView: View {
 
 struct LoginView: View {
     @Environment(AuthManager.self) private var auth
+    @Environment(AppSettings.self) private var settings
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Theme.accent.opacity(0.5), .black], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [settings.accent.opacity(0.5), .black], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             VStack(spacing: 28) {
                 Text("Swiftify")
@@ -36,7 +37,6 @@ struct LoginView: View {
                         .padding(.horizontal, 12)
                 }
                 .buttonStyle(.glassProminent)
-                .tint(Theme.accent)
                 .controlSize(.large)
                 .disabled(auth.isSigningIn)
 
@@ -67,7 +67,6 @@ struct MainTabView: View {
             Tab("Your Library", systemImage: "books.vertical.fill", value: AppTab.library) { LibraryView() }
             Tab("Create", systemImage: "plus", value: AppTab.create) { Color.clear }
         }
-        .tint(Theme.accent)
         .tabBarMinimizeBehavior(.onScrollDown)
         .tabViewBottomAccessory(isEnabled: player.track != nil) {
             MiniPlayer { showPlayer = true }

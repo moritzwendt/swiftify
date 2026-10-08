@@ -134,7 +134,7 @@ struct FullPlayerView: View {
                     } label: {
                         Image(systemName: player.isLiked ? "heart.fill" : "heart")
                             .font(.title3)
-                            .foregroundStyle(player.isLiked ? Theme.accent : .white)
+                            .foregroundStyle(player.isLiked ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
                             .frame(width: 30, height: 30)
                     }
                     .buttonStyle(.glass)
@@ -199,7 +199,7 @@ struct FullPlayerView: View {
         } label: {
             Image(systemName: symbol)
                 .font(size)
-                .foregroundStyle(active ? Theme.accent : .white)
+                .foregroundStyle(active ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
                 .frame(width: 36, height: 36)
         }
         .buttonStyle(.glass)

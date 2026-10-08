@@ -1,33 +1,5 @@
 import SwiftUI
 
-struct ProfileButton: View {
-    @Environment(AuthManager.self) private var auth
-    @Environment(LibraryStore.self) private var library
-    @State private var showTest = false
-
-    private var initial: String {
-        String((library.me?.displayName ?? "S").prefix(1)).uppercased()
-    }
-
-    var body: some View {
-        Menu {
-            Button("Playback test") { showTest = true }
-            Button("Sign out", role: .destructive) { auth.signOut() }
-        } label: {
-            Text(initial)
-                .font(.subheadline.bold())
-                .foregroundStyle(.black)
-                .frame(width: 32, height: 32)
-                .background(Theme.accent, in: Circle())
-        }
-        .sheet(isPresented: $showTest) {
-            NavigationStack {
-                PlaybackTestView(auth: auth)
-            }
-        }
-    }
-}
-
 struct HomeView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player

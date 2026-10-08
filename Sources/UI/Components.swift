@@ -3,10 +3,6 @@ import CoreImage.CIFilterBuiltins
 import SwiftUI
 import UIKit
 
-enum Theme {
-    static let accent = Color(red: 0.12, green: 0.84, blue: 0.38)
-}
-
 enum Route: Hashable {
     case playlist(Playlist)
     case album(Album)
@@ -91,7 +87,7 @@ struct MediaRow: View {
             Spacer(minLength: 0)
             if badge {
                 Image(systemName: "arrow.down.circle.fill")
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(.tint)
             }
         }
         .contentShape(Rectangle())
@@ -119,7 +115,7 @@ struct TrackRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.name)
-                    .foregroundStyle(isCurrent ? Theme.accent : .primary)
+                    .foregroundStyle(isCurrent ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                     .lineLimit(1)
                 Text(track.artistLine)
                     .font(.subheadline)
@@ -129,7 +125,7 @@ struct TrackRow: View {
             Spacer(minLength: 0)
             if isCurrent && player.isPlaying {
                 Image(systemName: "waveform")
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(.tint)
                     .symbolEffect(.variableColor.iterative)
             }
         }
@@ -163,6 +159,7 @@ struct ShelfCard: View {
 }
 
 struct PlayButton: View {
+    @Environment(AppSettings.self) private var settings
     var title = "Play"
     let action: () -> Void
 
@@ -170,10 +167,10 @@ struct PlayButton: View {
         Button(action: action) {
             Label(title, systemImage: "play.fill")
                 .font(.headline)
+                .foregroundStyle(settings.onAccent)
                 .padding(.horizontal, 12)
         }
         .buttonStyle(.glassProminent)
-        .tint(Theme.accent)
         .controlSize(.large)
     }
 }

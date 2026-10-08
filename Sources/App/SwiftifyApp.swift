@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct SwiftifyApp: App {
     @State private var auth: AuthManager
+    @State private var settings = AppSettings()
     @State private var library: LibraryStore
     @State private var player: PlayerManager
 
@@ -25,6 +26,9 @@ struct SwiftifyApp: App {
                 .environment(auth)
                 .environment(library)
                 .environment(player)
+                .environment(settings)
+                .tint(settings.accent)
+                .preferredColorScheme(settings.appearance.colorScheme)
                 .onChange(of: auth.isAuthenticated) { _, signedIn in
                     if !signedIn {
                         library.reset()

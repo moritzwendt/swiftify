@@ -82,7 +82,6 @@ struct CreateSheet: View {
                 Text("Create").frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
-            .tint(Theme.accent)
             .controlSize(.large)
             .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isBusy)
         }
@@ -107,7 +106,6 @@ struct CreateSheet: View {
                 Text("Join in Spotify").frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
-            .tint(Theme.accent)
             .controlSize(.large)
             .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
         }

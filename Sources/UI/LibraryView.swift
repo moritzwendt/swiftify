@@ -26,6 +26,7 @@ struct LibraryItem: Identifiable {
 
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
+    @Environment(AppSettings.self) private var settings
     @State private var filter: LibraryFilter?
     @State private var sort: LibrarySort = .recents
 
@@ -136,7 +137,7 @@ struct LibraryView: View {
             .navigationTitle("Your Library")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { ProfileButton() }
+                ToolbarItem(placement: .topBarTrailing) { ProfileButton() }
             }
             .appDestinations()
             .task { await library.load() }
@@ -179,12 +180,12 @@ struct LibraryView: View {
         } label: {
             Text(value.rawValue)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(selected ? .black : .primary)
+                .foregroundStyle(selected ? settings.onAccent : .primary)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 6)
         }
         .buttonStyle(.glass)
-        .tint(selected ? Theme.accent : nil)
+        .tint(selected ? settings.accent : nil)
     }
 
     private var sortRow: some View {
