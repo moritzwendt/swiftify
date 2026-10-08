@@ -58,6 +58,7 @@ final class LibraryStore {
         albums = loadedAlbums
         artists = loadedArtists
         likedTotal = loadedLiked?.total ?? likedTotal
+        BootLog.post("library", "\(playlists.count) playlists, \(albums.count) albums, \(artists.count) artists, \(likedTotal) liked songs")
         let contexts = (loadedHistory?.items ?? []).compactMap { $0.context?.uri }
         var seen = Set<String>()
         recentOrder = contexts.filter { seen.insert($0).inserted }

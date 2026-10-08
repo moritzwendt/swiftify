@@ -12,8 +12,19 @@ struct SwiftifyApp: App {
     @State private var warmer = CacheWarmer()
 
     init() {
+        _ = BootLog.origin
+        SystemBoot.record()
         let auth = AuthManager()
         let settings = AppSettings()
+        BootLog.shared.note("settings", "appearance \(settings.appearance.rawValue), accent #\(settings.accentHex), haptics \(settings.haptics ? "on" : "off")")
+        BootLog.shared.note("settings", "cache song lists \(settings.cacheLists ? "on" : "off"), images \(settings.cacheImages ? "on" : "off"), limit \(settings.imageCacheLimitMB) MB")
+        Task {
+            let lists = await TrackListCache.stats()
+            let images = await ImageCache.shared.stats()
+            let listSize = ByteCountFormatter.string(fromByteCount: Int64(lists.bytes), countStyle: .file)
+            let imageSize = ByteCountFormatter.string(fromByteCount: Int64(images.bytes), countStyle: .file)
+            BootLog.post("cache", "\(lists.count) song lists (\(listSize)), \(images.count) images (\(imageSize))")
+        }
         let api = SpotifyAPI(auth: auth)
         let library = LibraryStore(api: api)
         let player = PlayerManager(api: api, settings: settings)

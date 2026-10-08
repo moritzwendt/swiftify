@@ -44,9 +44,16 @@ final class AuthManager {
         if let current = saved, current.scope != SpotifyConfig.scopeString {
             store.clear()
             saved = nil
+            BootLog.shared.note("auth", "scopes changed, stored token cleared")
         }
         tokens = saved
         isAuthenticated = saved != nil
+        if let saved {
+            let remaining = Int(saved.expiresAt.timeIntervalSinceNow)
+            BootLog.shared.note("auth", "keychain token found, access token \(remaining > 0 ? "valid for \(remaining) s" : "expired")")
+        } else {
+            BootLog.shared.note("auth", "no keychain token")
+        }
     }
 
     func signIn() async {
@@ -121,8 +128,10 @@ final class AuthManager {
         let task = Task { try await refresh(current) }
         refreshTask = task
         defer { refreshTask = nil }
+        BootLog.post("auth", "access token expired, refreshing")
         do {
             let updated = try await task.value
+            BootLog.post("auth", "token refreshed, valid for \(Int(updated.expiresAt.timeIntervalSinceNow)) s")
             persist(updated)
             return updated.accessToken
         } catch let AuthError.server(status, _) where status == 400 || status == 401 {

@@ -52,6 +52,7 @@ struct SpotifyAPI {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         var attempt = 0
+        let startedAt = Date()
         while true {
             let (data, response) = try await URLSession.shared.data(for: request)
             let http = response as? HTTPURLResponse
@@ -61,6 +62,8 @@ struct SpotifyAPI {
                 try await Task.sleep(for: .seconds(wait + 0.2))
                 continue
             }
+            let millis = Int(Date().timeIntervalSince(startedAt) * 1000)
+            BootLog.post("http", "\(method) /v1/\(path) \(http?.statusCode ?? 0) \(millis) ms \(data.count) bytes")
             return APIResponse(status: http?.statusCode ?? 0, data: data)
         }
     }

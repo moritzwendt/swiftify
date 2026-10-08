@@ -36,6 +36,7 @@ final class PlayerManager {
     @ObservationIgnored private var expected: (uri: String, until: Date)?
     @ObservationIgnored private var expectedPlaying: (value: Bool, until: Date)?
     @ObservationIgnored private var commandTask: Task<Void, Never>?
+    @ObservationIgnored private var loggedFirstState = false
     @ObservationIgnored private var expectedShuffle: (value: Bool, until: Date)?
     @ObservationIgnored private var expectedRepeat: (value: String, until: Date)?
 
@@ -131,6 +132,10 @@ final class PlayerManager {
         do {
             let response = try await api.send("GET", "me/player")
             if response.status == 204 {
+                if !loggedFirstState {
+                    loggedFirstState = true
+                    BootLog.post("player", "idle, no active device")
+                }
                 if !holdsExpectedTrack(nil), !holdsExpectedPlaying(false) { isPlaying = false }
                 return
             }
@@ -341,6 +346,10 @@ final class PlayerManager {
         let incomingRepeat = state.repeatState ?? "off"
         if !holdsExpectedRepeat(incomingRepeat) { repeatMode = incomingRepeat }
         deviceName = state.device?.name
+        if !loggedFirstState {
+            loggedFirstState = true
+            BootLog.post("player", "\(isPlaying ? "playing" : "paused") \(track?.name ?? "nothing") on \(deviceName ?? "no device")")
+        }
     }
 
     private func refreshLiked() async {

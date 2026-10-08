@@ -4,6 +4,7 @@ struct HomeView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
     @Environment(AppSettings.self) private var settings
+    @Environment(ChromeState.self) private var chrome
     @State private var recentAlbums: [Album] = []
     @State private var topArtists: [Artist] = []
 
@@ -116,6 +117,7 @@ struct HomeView: View {
     }
 
     private func loadShelves() async {
+        defer { chrome.homeLoaded = true }
         if library.isSample { return }
         let history: Page<PlayHistory>? = try? await library.api.get(
             "me/player/recently-played",
@@ -128,5 +130,6 @@ struct HomeView: View {
             query: ["limit": "12", "time_range": settings.topArtistsRange.rawValue]
         )
         topArtists = top?.items ?? []
+        BootLog.post("home", "\(recentAlbums.count) recent albums, \(topArtists.count) top artists")
     }
 }

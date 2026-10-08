@@ -4,4 +4,5 @@ import Observation
 @Observable
 final class ChromeState {
     var showsSettings = false
+    var homeLoaded = false
 }

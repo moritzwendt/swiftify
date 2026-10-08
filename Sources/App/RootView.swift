@@ -7,12 +7,34 @@ enum AppTab: Hashable {
 struct RootView: View {
     @Environment(AuthManager.self) private var auth
     @Environment(LibraryStore.self) private var library
+    @State private var coverMode: CoverMode? = {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "settings.verboseBoot") { return .verbose }
+        if defaults.object(forKey: "settings.launchCover") as? Bool ?? true { return .logo }
+        return nil
+    }()
 
     var body: some View {
-        if auth.isAuthenticated || library.isSample {
-            MainTabView()
-        } else {
-            LoginView()
+        ZStack {
+            if auth.isAuthenticated || library.isSample {
+                MainTabView()
+            } else {
+                LoginView()
+            }
+            if let coverMode {
+                LaunchCover(mode: coverMode) {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) { self.coverMode = nil }
+                }
+                .zIndex(1)
+            }
+        }
+        .task {
+            if coverMode == nil {
+                try? await Task.sleep(for: .seconds(3))
+                BootLog.shared.finish()
+            }
         }
     }
 }
@@ -92,6 +114,7 @@ struct MainTabView: View {
         .overlay(alignment: .top) { errorToast }
         .haptic(.success, trigger: queue.addedCount)
         .task {
+            BootLog.post("player", "polling started")
             await library.load()
             player.startPolling()
             await library.membership.scan(library.editablePlaylists)

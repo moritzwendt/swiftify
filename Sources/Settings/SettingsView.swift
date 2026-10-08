@@ -152,8 +152,19 @@ struct SettingsView: View {
     }
 }
 
+private struct CoverPreview: Identifiable {
+    let mode: CoverMode
+    var id: Int { mode == .logo ? 0 : 1 }
+}
+
 struct AppearanceSettings: View {
     @Environment(AppSettings.self) private var settings
+    @State private var previewItem: CoverPreview?
+
+    private var preview: CoverMode? {
+        get { previewItem?.mode }
+        nonmutating set { previewItem = newValue.map(CoverPreview.init) }
+    }
 
     var body: some View {
         @Bindable var settings = settings
@@ -164,6 +175,14 @@ struct AppearanceSettings: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+            }
+
+            Section("Startup") {
+                Toggle("Launch logo", isOn: $settings.launchCover)
+                    .disabled(settings.verboseBoot)
+                Toggle("Verbose boot", isOn: $settings.verboseBoot)
+                Button("Preview launch logo") { preview = .logo }
+                Button("Preview verbose boot") { preview = .verbose }
             }
 
             Section("Accent color") {
@@ -207,6 +226,9 @@ struct AppearanceSettings: View {
         }
         .navigationTitle("Appearance")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(item: $previewItem) { item in
+            LaunchCover(mode: item.mode, isPreview: true) { previewItem = nil }
+        }
     }
 }
 

@@ -153,6 +153,14 @@ final class AppSettings {
         didSet { Self.defaults.set(previousRestartSeconds, forKey: "settings.previousRestartSeconds") }
     }
 
+    var launchCover: Bool {
+        didSet { Self.defaults.set(launchCover, forKey: "settings.launchCover") }
+    }
+
+    var verboseBoot: Bool {
+        didSet { Self.defaults.set(verboseBoot, forKey: "settings.verboseBoot") }
+    }
+
     var cacheLists: Bool {
         didSet { Self.defaults.set(cacheLists, forKey: "settings.cacheLists") }
     }
@@ -194,6 +202,8 @@ final class AppSettings {
         libraryGrid = defaults.object(forKey: "settings.libraryGrid") as? Bool ?? false
         showLikedSongsRow = defaults.object(forKey: "settings.showLikedSongsRow") as? Bool ?? true
         previousRestartSeconds = defaults.object(forKey: "settings.previousRestartSeconds") as? Int ?? 3
+        launchCover = defaults.object(forKey: "settings.launchCover") as? Bool ?? true
+        verboseBoot = defaults.object(forKey: "settings.verboseBoot") as? Bool ?? false
         cacheLists = defaults.object(forKey: "settings.cacheLists") as? Bool ?? true
         cacheImages = defaults.object(forKey: "settings.cacheImages") as? Bool ?? true
         preloadImages = defaults.object(forKey: "settings.preloadImages") as? Bool ?? true
@@ -224,6 +234,8 @@ final class AppSettings {
         libraryGrid = false
         showLikedSongsRow = true
         previousRestartSeconds = 3
+        launchCover = true
+        verboseBoot = false
         cacheLists = true
         cacheImages = true
         preloadImages = true
