@@ -3,6 +3,8 @@ import SwiftUI
 struct MiniPlayer: View {
     @Environment(PlayerManager.self) private var player
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+    @State private var dragX: CGFloat = 0
+    @State private var swipeCount = 0
     let onTap: () -> Void
 
     var body: some View {
@@ -43,8 +45,34 @@ struct MiniPlayer: View {
             }
         }
         .padding(.horizontal, 16)
+        .offset(x: dragX)
+        .opacity(1 - min(abs(dragX) / 200, 0.5))
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+        .simultaneousGesture(swipeGesture)
+        .haptic(.impact(flexibility: .soft), trigger: swipeCount)
+    }
+
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                dragX = value.translation.width * 0.5
+            }
+            .onEnded { value in
+                let distance = value.translation.width
+                let horizontal = abs(distance) > abs(value.translation.height)
+                withAnimation(.spring(duration: 0.35, bounce: 0.3)) { dragX = 0 }
+                guard horizontal, abs(distance) > 50 else { return }
+                swipeCount += 1
+                Task {
+                    if distance < 0 {
+                        await player.next()
+                    } else {
+                        await player.skipBack()
+                    }
+                }
+            }
     }
 }
 

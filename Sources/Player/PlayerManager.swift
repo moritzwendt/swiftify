@@ -21,6 +21,8 @@ final class PlayerManager {
     @ObservationIgnored private let api: SpotifyAPI
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored var isSample = false
+    @ObservationIgnored private var sampleQueue: [Track] = []
+    @ObservationIgnored private var sampleIndex = 0
 
     init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
@@ -89,7 +91,17 @@ final class PlayerManager {
         isPlaying = false
     }
 
-    func loadSample(track: Track, positionMs: Double, context: String?) {
+    private func stepSample(_ delta: Int) {
+        guard !sampleQueue.isEmpty else { return }
+        sampleIndex = (sampleIndex + delta + sampleQueue.count) % sampleQueue.count
+        track = sampleQueue[sampleIndex]
+        basePositionMs = 0
+        baseDate = Date()
+    }
+
+    func loadSample(queue: [Track], positionMs: Double, context: String?) {
+        sampleQueue = queue
+        let track = queue[0]
         isSample = true
         contextURI = context
         self.track = track
@@ -147,9 +159,21 @@ final class PlayerManager {
         }
     }
 
-    func next() async { await command("POST", "me/player/next") }
+    func next() async {
+        if isSample {
+            stepSample(1)
+            return
+        }
+        await command("POST", "me/player/next")
+    }
 
-    func previous() async { await command("POST", "me/player/previous") }
+    func previous() async {
+        if isSample {
+            stepSample(-1)
+            return
+        }
+        await command("POST", "me/player/previous")
+    }
 
     func skipBack() async {
         let threshold = Double(settings.previousRestartSeconds) * 1000

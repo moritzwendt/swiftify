@@ -22,7 +22,11 @@ enum SampleData {
             decode(#"{"id":"r\#(index)","uri":"spotify:artist:r\#(index)","name":"\#(name)"}"#)
         }
         library.loadSample(me: me, playlists: playlists, albums: albums, artists: artists, likedTotal: 482)
-        let track: Track = decode(#"{"uri":"spotify:track:t1","name":"The Less I Know The Better","artists":[{"name":"Tame Impala"}],"duration_ms":216000}"#)
-        player.loadSample(track: track, positionMs: 64000, context: "spotify:playlist:p0")
+        let queue: [Track] = [
+            decode(#"{"uri":"spotify:track:t1","name":"The Less I Know The Better","artists":[{"name":"Tame Impala"}],"duration_ms":216000}"#),
+            decode(#"{"uri":"spotify:track:t2","name":"Instant Crush","artists":[{"name":"Daft Punk"}],"duration_ms":337000}"#),
+            decode(#"{"uri":"spotify:track:t3","name":"Nights","artists":[{"name":"Frank Ocean"}],"duration_ms":307000}"#)
+        ]
+        player.loadSample(queue: queue, positionMs: 64000, context: "spotify:playlist:p0")
     }
 }
