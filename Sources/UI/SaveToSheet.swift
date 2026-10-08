@@ -316,10 +316,27 @@ struct SaveToSheet: View {
 struct TrackActionsModifier: ViewModifier {
     let track: Track
     @Environment(QueueStore.self) private var queue
+    @Environment(AppSettings.self) private var settings
     @State private var showSave = false
 
     func body(content: Content) -> some View {
         content
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    Task { await queue.add(track) }
+                } label: {
+                    Label("Add to queue", systemImage: "text.line.last.and.arrowtriangle.forward")
+                }
+                .tint(settings.accent)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button {
+                    showSave = true
+                } label: {
+                    Label("Add to playlist", systemImage: "text.badge.plus")
+                }
+                .tint(Color.gray.mix(with: .black, by: 0.3))
+            }
             .contextMenu {
                 Button("Add to queue", systemImage: "text.line.last.and.arrowtriangle.forward") {
                     Task { await queue.add(track) }

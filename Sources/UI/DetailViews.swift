@@ -56,45 +56,50 @@ struct PlaylistDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
-                DetailHeader(
-                    imageURL: playlist.images.url(atLeast: 640),
-                    title: playlist.name,
-                    subtitle: subtitle,
-                    isPlaying: player.isPlaying(context: playlist.uri)
-                ) {
-                    Task { await player.playOrPause(context: playlist.uri) }
-                }
-
-                if canList {
-                    ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
-                        Button {
-                            Task { await player.play(context: playlist.uri, offset: track.uri) }
-                        } label: {
-                            TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
-                        }
-                        .buttonStyle(.plain)
-                        .trackActions(track)
-                        .onAppear {
-                            if index == tracks.count - 5 { Task { await loadMore() } }
-                        }
-                    }
-                } else {
-                    Text("The track list is not available for playlists you do not own")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 8)
-                }
+        List {
+            DetailHeader(
+                imageURL: playlist.images.url(atLeast: 640),
+                title: playlist.name,
+                subtitle: subtitle,
+                isPlaying: player.isPlaying(context: playlist.uri)
+            ) {
+                Task { await player.playOrPause(context: playlist.uri) }
             }
-            .padding(.horizontal, 16)
+            .detailRow(top: 0)
+
+            if canList {
+                ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
+                    Button {
+                        Task { await player.play(context: playlist.uri, offset: track.uri) }
+                    } label: {
+                        TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
+                    }
+                    .buttonStyle(.plain)
+                    .trackActions(track)
+                    .detailRow()
+                    .onAppear {
+                        if index == tracks.count - 5 { Task { await loadMore() } }
+                    }
+                }
+            } else {
+                Text("The track list is not available for playlists you do not own")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .detailRow(top: 14)
+            }
         }
+        .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadMore() }
     }
 
     private func loadMore() async {
+        if library.isSample {
+            tracks = SampleData.tracks
+            return
+        }
         guard canList, !isLoading, (offset == 0 || offset < total) else { return }
         isLoading = true
         defer { isLoading = false }
@@ -120,35 +125,40 @@ struct AlbumDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
-                DetailHeader(
-                    imageURL: album.images.url(atLeast: 640),
-                    title: album.name,
-                    subtitle: subtitle,
-                    isPlaying: player.isPlaying(context: album.uri)
-                ) {
-                    Task { await player.playOrPause(context: album.uri) }
-                }
-                ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
-                    Button {
-                        Task { await player.play(context: album.uri, offset: track.uri) }
-                    } label: {
-                        TrackRow(track: track, number: index + 1)
-                    }
-                    .buttonStyle(.plain)
-                    .trackActions(track)
-                }
+        List {
+            DetailHeader(
+                imageURL: album.images.url(atLeast: 640),
+                title: album.name,
+                subtitle: subtitle,
+                isPlaying: player.isPlaying(context: album.uri)
+            ) {
+                Task { await player.playOrPause(context: album.uri) }
             }
-            .padding(.horizontal, 16)
+            .detailRow(top: 0)
+
+            ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
+                Button {
+                    Task { await player.play(context: album.uri, offset: track.uri) }
+                } label: {
+                    TrackRow(track: track, number: index + 1)
+                }
+                .buttonStyle(.plain)
+                .trackActions(track)
+                .detailRow()
+            }
         }
+        .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if let embedded = album.tracks?.items, !embedded.isEmpty {
                 tracks = embedded
                 return
             }
-            if library.isSample { return }
+            if library.isSample {
+                tracks = Array(SampleData.tracks.prefix(9))
+                return
+            }
             let full: Album? = try? await library.api.get("albums/\(album.id)")
             tracks = full?.tracks?.items ?? []
         }
@@ -224,38 +234,43 @@ struct LikedSongsView: View {
     @State private var isLoading = false
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
-                DetailHeader(
-                    imageURL: nil,
-                    liked: true,
-                    title: "Liked Songs",
-                    subtitle: "\(library.likedTotal) songs",
-                    isPlaying: player.isPlaying(context: Self.contextKey)
-                ) {
-                    Task { await player.playOrPause(uris: tracks.map(\.uri), key: Self.contextKey) }
+        List {
+            DetailHeader(
+                imageURL: nil,
+                liked: true,
+                title: "Liked Songs",
+                subtitle: "\(library.likedTotal) songs",
+                isPlaying: player.isPlaying(context: Self.contextKey)
+            ) {
+                Task { await player.playOrPause(uris: tracks.map(\.uri), key: Self.contextKey) }
+            }
+            .detailRow(top: 0)
+
+            ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
+                Button {
+                    Task { await player.play(uris: tracks.map(\.uri), startAt: index, key: Self.contextKey) }
+                } label: {
+                    TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                 }
-                ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
-                    Button {
-                        Task { await player.play(uris: tracks.map(\.uri), startAt: index, key: Self.contextKey) }
-                    } label: {
-                        TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
-                    }
-                    .buttonStyle(.plain)
-                    .trackActions(track)
-                    .onAppear {
-                        if index == tracks.count - 5 { Task { await loadMore() } }
-                    }
+                .buttonStyle(.plain)
+                .trackActions(track)
+                .detailRow()
+                .onAppear {
+                    if index == tracks.count - 5 { Task { await loadMore() } }
                 }
             }
-            .padding(.horizontal, 16)
         }
+        .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadMore() }
     }
 
     private func loadMore() async {
-        if library.isSample { return }
+        if library.isSample {
+            tracks = SampleData.tracks
+            return
+        }
         guard !isLoading, (offset == 0 || offset < total) else { return }
         isLoading = true
         defer { isLoading = false }

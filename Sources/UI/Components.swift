@@ -196,11 +196,15 @@ struct PlayButton: View {
 
     var body: some View {
         Button(action: action) {
-            Label(isPlaying ? "Pause" : "Play", systemImage: isPlaying ? "pause.fill" : "play.fill")
-                .font(.headline)
-                .foregroundStyle(settings.onAccent)
-                .padding(.horizontal, 12)
-                .contentTransition(.symbolEffect(.replace))
+            HStack(spacing: 8) {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .accessibilityHidden(true)
+                Text(isPlaying ? "Pause" : "Play")
+            }
+            .font(.headline)
+            .foregroundStyle(settings.onAccent)
+            .padding(.horizontal, 12)
+            .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.glassProminent)
         .controlSize(.large)
@@ -251,6 +255,11 @@ struct HapticModifier<Trigger: Equatable>: ViewModifier {
 extension View {
     func haptic<Trigger: Equatable>(_ feedback: SensoryFeedback, trigger: Trigger) -> some View {
         modifier(HapticModifier(feedback: feedback, trigger: trigger))
+    }
+
+    func detailRow(top: CGFloat = 6, bottom: CGFloat = 6) -> some View {
+        listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: top, leading: 16, bottom: bottom, trailing: 16))
     }
 
     func appDestinations() -> some View {
