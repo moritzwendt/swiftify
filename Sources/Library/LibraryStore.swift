@@ -16,6 +16,7 @@ final class LibraryStore {
     private(set) var pinned: [String]
 
     @ObservationIgnored let api: SpotifyAPI
+    @ObservationIgnored let membership: MembershipStore
     @ObservationIgnored var isSample = false
 
     private static let downloadedKey = "downloadedMarks"
@@ -23,6 +24,7 @@ final class LibraryStore {
 
     init(api: SpotifyAPI) {
         self.api = api
+        membership = MembershipStore(api: api)
         downloaded = Set(UserDefaults.standard.stringArray(forKey: Self.downloadedKey) ?? [])
         pinned = UserDefaults.standard.stringArray(forKey: Self.pinnedKey) ?? []
     }
@@ -69,6 +71,7 @@ final class LibraryStore {
         artists = []
         likedTotal = 0
         recentOrder = []
+        membership.reset()
         hasLoaded = false
     }
 
@@ -87,6 +90,19 @@ final class LibraryStore {
             downloaded.insert(uri)
         }
         UserDefaults.standard.set(Array(downloaded), forKey: Self.downloadedKey)
+    }
+
+    func updateSnapshot(playlistID: String, snapshot: String) {
+        guard let index = playlists.firstIndex(where: { $0.id == playlistID }) else { return }
+        playlists[index].snapshotId = snapshot
+    }
+
+    func adjustLikedTotal(by delta: Int) {
+        likedTotal = max(0, likedTotal + delta)
+    }
+
+    var editablePlaylists: [Playlist] {
+        playlists.filter { canListTracks(of: $0) }
     }
 
     func isPinned(_ uri: String) -> Bool { pinned.contains(uri) }

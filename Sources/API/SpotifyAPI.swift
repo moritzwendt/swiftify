@@ -71,6 +71,16 @@ struct SpotifyAPI {
         try response.validate()
     }
 
+    func request<T: Decodable>(
+        _ method: String,
+        _ path: String,
+        body: [String: Any]
+    ) async throws -> T {
+        let response = try await send(method, path, body: body)
+        try response.validate()
+        return try response.decode(T.self)
+    }
+
     func post<T: Decodable>(_ path: String, body: [String: Any]) async throws -> T {
         let response = try await send("POST", path, body: body)
         try response.validate()

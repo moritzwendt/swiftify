@@ -128,6 +128,7 @@ struct FullPlayerView: View {
     @State private var tint: Color = .gray
     @State private var dragOffset: CGFloat = 0
     @State private var screenHeight: CGFloat = 900
+    @State private var showSave = false
 
     var body: some View {
         ZStack {
@@ -168,13 +169,15 @@ struct FullPlayerView: View {
                         }
                         Spacer(minLength: 0)
                         Button {
-                            Task { await player.toggleLike() }
+                            showSave = true
                         } label: {
-                            Image(systemName: player.isLiked ? "heart.fill" : "heart")
-                                .font(.title3)
+                            Image(systemName: player.isLiked ? "checkmark" : "plus")
+                                .font(.title3.weight(.semibold))
                                 .foregroundStyle(player.isLiked ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
+                                .contentTransition(.symbolEffect(.replace))
                                 .frame(width: 30, height: 30)
                         }
+                        .accessibilityLabel("Save to")
                         .buttonStyle(.glass)
                         .buttonBorderShape(.circle)
                     }
@@ -221,6 +224,11 @@ struct FullPlayerView: View {
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
         .presentationBackground(.clear)
+        .sheet(isPresented: $showSave) {
+            if let track = player.track {
+                SaveToSheet(track: track, autoLike: !player.isLiked)
+            }
+        }
         .background {
             GeometryReader { geometry in
                 Color.clear.onAppear { screenHeight = geometry.size.height }

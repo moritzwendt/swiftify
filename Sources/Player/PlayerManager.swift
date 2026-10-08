@@ -204,6 +204,10 @@ final class PlayerManager {
         await command("PUT", "me/player/repeat", query: ["state": repeatMode])
     }
 
+    func syncLiked(uri: String, liked: Bool) {
+        if track?.uri == uri { isLiked = liked }
+    }
+
     func toggleLike() async {
         guard let uri = track?.uri else { return }
         let target = !isLiked

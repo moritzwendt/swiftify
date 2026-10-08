@@ -75,6 +75,7 @@ struct PlaylistDetailView: View {
                             TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                         }
                         .buttonStyle(.plain)
+                        .trackActions(track)
                         .onAppear {
                             if index == tracks.count - 5 { Task { await loadMore() } }
                         }
@@ -136,6 +137,7 @@ struct AlbumDetailView: View {
                         TrackRow(track: track, number: index + 1)
                     }
                     .buttonStyle(.plain)
+                    .trackActions(track)
                 }
             }
             .padding(.horizontal, 16)
@@ -240,6 +242,7 @@ struct LikedSongsView: View {
                         TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                     }
                     .buttonStyle(.plain)
+                    .trackActions(track)
                     .onAppear {
                         if index == tracks.count - 5 { Task { await loadMore() } }
                     }

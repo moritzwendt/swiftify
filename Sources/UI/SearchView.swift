@@ -36,6 +36,7 @@ struct SearchView: View {
                             TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                         }
                         .buttonStyle(.plain)
+                        .trackActions(track)
                     }
                 }
             }

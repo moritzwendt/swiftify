@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		11B7039050FC8BFA776CB9D2 /* MembershipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B875DCE444C5608C150FB1 /* MembershipStore.swift */; };
 		11CD632230B7400670CEFFC8 /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055BBB40A64B448CFC70A1FF /* SampleData.swift */; };
 		1F02C94439C49CE1798E4713 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47E07B50B8AB7364BD96D94 /* SettingsView.swift */; };
 		31AB5FD3EEA24DD2A06F75B8 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F798C91C8348DB06C3AFE5 /* HomeView.swift */; };
 		343987956BAB9D90269A3A05 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F921DF436A201E5E30C2527 /* LibraryStore.swift */; };
+		417AA39FE41CDB0726295828 /* SaveToSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */; };
 		5007E9366424709DEBCEDCF7 /* PKCE.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC357319C2EB58FDD95138 /* PKCE.swift */; };
 		519007480FE4DA19E60C3D4D /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6077B53A716C4C9707F0B4D /* Components.swift */; };
 		55565CDD5E6594F6AF7CDAC5 /* PlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9E47EC0CC750B9A6F48F2C /* PlayerManager.swift */; };
@@ -34,6 +36,7 @@
 		055BBB40A64B448CFC70A1FF /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
 		2F921DF436A201E5E30C2527 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
 		32F798C91C8348DB06C3AFE5 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		36B875DCE444C5608C150FB1 /* MembershipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipStore.swift; sourceTree = "<group>"; };
 		448568EAAECAFD202065608F /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftifyApp.swift; sourceTree = "<group>"; };
 		5A2845162E089807930C2FF0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
@@ -51,6 +54,7 @@
 		B6077B53A716C4C9707F0B4D /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		C187B116A8622056CC4AA47E /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
 		DB8AB62131834C889BBB1EB2 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveToSheet.swift; sourceTree = "<group>"; };
 		E47E07B50B8AB7364BD96D94 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E63152471936FB65D84D134F /* CreateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -101,6 +105,7 @@
 				32F798C91C8348DB06C3AFE5 /* HomeView.swift */,
 				ABC856203CAD985E07B8FD41 /* LibraryView.swift */,
 				9253737EC9EB49D97054D3CF /* Player.swift */,
+				DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */,
 				5A2845162E089807930C2FF0 /* SearchView.swift */,
 			);
 			path = UI;
@@ -134,6 +139,7 @@
 			isa = PBXGroup;
 			children = (
 				2F921DF436A201E5E30C2527 /* LibraryStore.swift */,
+				36B875DCE444C5608C150FB1 /* MembershipStore.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -231,6 +237,7 @@
 				31AB5FD3EEA24DD2A06F75B8 /* HomeView.swift in Sources */,
 				343987956BAB9D90269A3A05 /* LibraryStore.swift in Sources */,
 				A1D7DC7DA384A5A22516F889 /* LibraryView.swift in Sources */,
+				11B7039050FC8BFA776CB9D2 /* MembershipStore.swift in Sources */,
 				E7DF497C9E42390C4E4987E9 /* Models.swift in Sources */,
 				5007E9366424709DEBCEDCF7 /* PKCE.swift in Sources */,
 				9A1BB7F8F550CDD0A1D9B174 /* PlaybackTestView.swift in Sources */,
@@ -238,6 +245,7 @@
 				55565CDD5E6594F6AF7CDAC5 /* PlayerManager.swift in Sources */,
 				83CAAD95905B1779C9ED5C7A /* RootView.swift in Sources */,
 				11CD632230B7400670CEFFC8 /* SampleData.swift in Sources */,
+				417AA39FE41CDB0726295828 /* SaveToSheet.swift in Sources */,
 				A9F7C2525563870D3BB54F3A /* SearchView.swift in Sources */,
 				1F02C94439C49CE1798E4713 /* SettingsView.swift in Sources */,
 				861AFA475498D4655847FD54 /* SpotifyAPI.swift in Sources */,

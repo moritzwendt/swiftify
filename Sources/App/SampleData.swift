@@ -27,6 +27,7 @@ enum SampleData {
             decode(#"{"uri":"spotify:track:t2","name":"Instant Crush","artists":[{"name":"Daft Punk"}],"duration_ms":337000}"#),
             decode(#"{"uri":"spotify:track:t3","name":"Nights","artists":[{"name":"Frank Ocean"}],"duration_ms":307000}"#)
         ]
+        library.membership.loadSample(["p1": ["spotify:track:t1"]])
         player.loadSample(queue: queue, positionMs: 64000, context: "spotify:playlist:p0")
     }
 }

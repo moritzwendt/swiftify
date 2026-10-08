@@ -114,11 +114,27 @@ struct Playlist: Decodable, Hashable, Identifiable {
     let description: String?
     let items: Counts?
     let tracks: Counts?
+    var snapshotId: String?
 
     var trackCount: Int? { items?.total ?? tracks?.total }
 
     static func == (lhs: Playlist, rhs: Playlist) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+struct URIRef: Decodable {
+    let uri: String?
+}
+
+struct URIItem: Decodable {
+    let item: URIRef?
+    let track: URIRef?
+
+    var uri: String? { item?.uri ?? track?.uri }
+}
+
+struct SnapshotResponse: Decodable {
+    let snapshotId: String?
 }
 
 struct Me: Decodable {
