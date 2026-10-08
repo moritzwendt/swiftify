@@ -65,6 +65,18 @@ struct SpotifyAPI {
         }
     }
 
+    func uploadJPEG(_ path: String, base64: String) async throws {
+        let token = try await auth.validAccessToken()
+        var request = URLRequest(url: SpotifyConfig.apiBase.appending(path: path))
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data(base64.utf8)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        try APIResponse(status: status, data: data).validate()
+    }
+
     func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
         let response = try await send("GET", path, query: query)
         try response.validate()

@@ -126,7 +126,7 @@ struct Playlist: Decodable, Hashable, Identifiable {
     let id: String
     let uri: String
     var name: String
-    let images: [SpotifyImage]?
+    var images: [SpotifyImage]?
     let owner: Owner?
     var collaborative: Bool?
     var description: String?

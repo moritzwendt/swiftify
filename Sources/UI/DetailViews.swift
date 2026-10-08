@@ -76,6 +76,8 @@ struct PlaylistDetailView: View {
     @State private var tracks: [Track] = []
     @State private var isComplete = false
     @State private var showMenu = false
+    @State private var pendingDestination: MenuDestination?
+    @State private var destination: MenuDestination?
     @State private var editMode: EditMode = .inactive
     @State private var serial = SerialTasks()
 
@@ -165,19 +167,30 @@ struct PlaylistDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showMenu) {
+        .sheet(isPresented: $showMenu, onDismiss: {
+            destination = pendingDestination
+            pendingDestination = nil
+        }) {
             PlaylistMenuSheet(
                 playlist: live,
                 tracks: tracks,
                 isOwned: isOwned,
                 canEdit: canList && (isOwned || live.collaborative == true),
                 isReady: isComplete,
+                onSelect: { pendingDestination = $0 },
                 onEdit: { editMode = .active },
+                onDeleted: { dismiss() }
+            )
+        }
+        .sheet(item: $destination) { destination in
+            MenuDestinationSheet(
+                destination: destination,
+                playlist: live,
+                tracks: tracks,
                 onAdded: { track, snapshot in
                     tracks.append(track)
                     persist(snapshot: snapshot)
-                },
-                onDeleted: { dismiss() }
+                }
             )
         }
         .task { await load() }
@@ -270,6 +283,8 @@ struct AlbumDetailView: View {
     @Environment(PlayerManager.self) private var player
     @State private var tracks: [Track] = []
     @State private var showMenu = false
+    @State private var pendingDestination: MenuDestination?
+    @State private var destination: MenuDestination?
 
     private var subtitle: String {
         [album.artistLine, album.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " \u{2022} ")
@@ -322,8 +337,14 @@ struct AlbumDetailView: View {
                 .accessibilityLabel("More")
             }
         }
-        .sheet(isPresented: $showMenu) {
-            AlbumMenuSheet(album: album, tracks: tracks)
+        .sheet(isPresented: $showMenu, onDismiss: {
+            destination = pendingDestination
+            pendingDestination = nil
+        }) {
+            AlbumMenuSheet(album: album, tracks: tracks, onSelect: { pendingDestination = $0 })
+        }
+        .sheet(item: $destination) { destination in
+            MenuDestinationSheet(destination: destination, album: album, tracks: tracks, onAdded: { _, _ in })
         }
         .task {
             if let embedded = album.tracks?.items, !embedded.isEmpty {

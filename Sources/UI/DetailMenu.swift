@@ -1,4 +1,6 @@
+import PhotosUI
 import SwiftUI
+import UIKit
 
 final class SerialTasks {
     private var last: Task<Void, Never>?
@@ -13,10 +15,13 @@ final class SerialTasks {
     }
 }
 
-private enum MenuPage: Hashable {
-    case addToPlaylist
+enum MenuDestination: String, Identifiable {
     case addSongs
+    case addToPlaylist
     case details
+    case cover
+
+    var id: String { rawValue }
 }
 
 private struct MenuRow: View {
@@ -35,8 +40,27 @@ private struct MenuRow: View {
                 .foregroundStyle(destructive ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 11)
         .contentShape(Rectangle())
+    }
+}
+
+private struct MenuButton: View {
+    let symbol: String
+    let title: String
+    var isOn = false
+    var destructive = false
+    var enabled = true
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            MenuRow(symbol: symbol, title: title, isOn: isOn, destructive: destructive)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.4)
     }
 }
 
@@ -60,7 +84,27 @@ private struct MenuHeader: View {
             }
             Spacer(minLength: 0)
         }
-        .listRowSeparator(.hidden)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 14)
+    }
+}
+
+private struct MenuContainer<Content: View>: View {
+    @State private var height: CGFloat = 560
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                content
+            }
+            .padding(.top, 28)
+            .padding(.bottom, 8)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .presentationDetents([.height(height)])
+        .presentationDragIndicator(.visible)
     }
 }
 
@@ -75,15 +119,13 @@ struct PlaylistMenuSheet: View {
     let isOwned: Bool
     let canEdit: Bool
     let isReady: Bool
+    let onSelect: (MenuDestination) -> Void
     let onEdit: () -> Void
-    let onAdded: (Track, String?) -> Void
     let onDeleted: () -> Void
 
     @Environment(LibraryStore.self) private var library
     @Environment(QueueStore.self) private var queue
     @Environment(\.dismiss) private var dismiss
-    @State private var path: [MenuPage] = []
-    @State private var detent: PresentationDetent = .fraction(0.8)
     @State private var confirmDelete = false
     @State private var saves: Int?
 
@@ -109,123 +151,89 @@ struct PlaylistMenuSheet: View {
 
     private var isSaved: Bool { library.isSaved(playlist) }
 
+    private func choose(_ destination: MenuDestination) {
+        onSelect(destination)
+        dismiss()
+    }
+
     var body: some View {
-        NavigationStack(path: $path) {
-            List {
-                MenuHeader(imageURL: playlist.images.url(atLeast: 100), title: playlist.name, subtitle: subtitle)
+        MenuContainer {
+            MenuHeader(imageURL: playlist.images.url(atLeast: 100), title: playlist.name, subtitle: subtitle)
 
-                Section {
-
-                ShareLink(item: shareURL) {
-                    MenuRow(symbol: "square.and.arrow.up", title: "Share")
-                }
-
-                if canEdit {
-                    NavigationLink(value: MenuPage.addSongs) {
-                        MenuRow(symbol: "plus.circle", title: "Add songs to this playlist")
-                    }
-                    .disabled(!isReady)
-                }
-
-                if !isOwned {
-                    Button {
-                        Task { await library.setSaved(playlist, saved: !isSaved) }
-                        dismiss()
-                    } label: {
-                        MenuRow(
-                            symbol: isSaved ? "checkmark.circle.fill" : "plus.circle",
-                            title: isSaved ? "Remove from library" : "Save to library",
-                            isOn: isSaved
-                        )
-                    }
-                }
-
-                Button {
-                    Task { await queue.add(tracks: tracks) }
-                    dismiss()
-                } label: {
-                    MenuRow(symbol: "text.line.last.and.arrowtriangle.forward", title: "Add to queue")
-                }
-                .disabled(tracks.isEmpty)
-
-                NavigationLink(value: MenuPage.addToPlaylist) {
-                    MenuRow(symbol: "text.badge.plus", title: "Add to other playlist")
-                }
-                .disabled(tracks.isEmpty)
-
-                Button {
-                    library.toggleDownloaded(playlist.uri)
-                    dismiss()
-                } label: {
-                    MenuRow(
-                        symbol: library.isDownloaded(playlist.uri) ? "arrow.down.circle.fill" : "arrow.down.circle",
-                        title: library.isDownloaded(playlist.uri) ? "Remove download mark" : "Mark as downloaded",
-                        isOn: library.isDownloaded(playlist.uri)
-                    )
-                }
-
-                Button {
-                    library.togglePin(playlist.uri)
-                    dismiss()
-                } label: {
-                    MenuRow(
-                        symbol: library.isPinned(playlist.uri) ? "pin.slash" : "pin",
-                        title: library.isPinned(playlist.uri) ? "Unpin" : "Pin"
-                    )
-                }
-
-                if canEdit {
-                    Button {
-                        dismiss()
-                        onEdit()
-                    } label: {
-                        MenuRow(symbol: "line.3.horizontal", title: "Edit playlist")
-                    }
-                    .disabled(!isReady)
-                }
-
-                if isOwned {
-                    NavigationLink(value: MenuPage.details) {
-                        MenuRow(symbol: "pencil", title: "Name and details")
-                    }
-
-                    Button(role: .destructive) {
-                        confirmDelete = true
-                    } label: {
-                        MenuRow(symbol: "trash", title: "Delete playlist", destructive: true)
-                    }
-                }
-                }
-                .listRowSeparator(.hidden)
+            ShareLink(item: shareURL) {
+                MenuRow(symbol: "square.and.arrow.up", title: "Share")
             }
-            .listStyle(.plain)
-            .environment(\.defaultMinListRowHeight, 46)
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: MenuPage.self) { page in
-                switch page {
-                case .addSongs:
-                    AddSongsView(playlist: playlist, onAdded: onAdded)
-                case .addToPlaylist:
-                    AddToPlaylistView(
-                        title: playlist.name,
-                        imageURL: playlist.images.url(atLeast: 100),
-                        uris: tracks.map(\.uri),
-                        excludingID: playlist.id
-                    )
-                case .details:
-                    PlaylistDetailsForm(playlist: playlist)
+            .buttonStyle(.plain)
+
+            if canEdit {
+                MenuButton(symbol: "plus.circle", title: "Add songs to this playlist", enabled: isReady) {
+                    choose(.addSongs)
                 }
             }
-            .confirmationDialog("Delete playlist", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    Task { await library.setSaved(playlist, saved: false) }
+
+            if !isOwned {
+                MenuButton(
+                    symbol: isSaved ? "checkmark.circle.fill" : "plus.circle",
+                    title: isSaved ? "Remove from library" : "Save to library",
+                    isOn: isSaved
+                ) {
+                    Task { await library.setSaved(playlist, saved: !isSaved) }
                     dismiss()
-                    onDeleted()
+                }
+            }
+
+            MenuButton(symbol: "text.line.last.and.arrowtriangle.forward", title: "Add to queue", enabled: !tracks.isEmpty) {
+                Task { await queue.add(tracks: tracks) }
+                dismiss()
+            }
+
+            MenuButton(symbol: "text.badge.plus", title: "Add to other playlist", enabled: !tracks.isEmpty) {
+                choose(.addToPlaylist)
+            }
+
+            MenuButton(
+                symbol: library.isDownloaded(playlist.uri) ? "arrow.down.circle.fill" : "arrow.down.circle",
+                title: library.isDownloaded(playlist.uri) ? "Remove download mark" : "Mark as downloaded",
+                isOn: library.isDownloaded(playlist.uri)
+            ) {
+                library.toggleDownloaded(playlist.uri)
+                dismiss()
+            }
+
+            MenuButton(
+                symbol: library.isPinned(playlist.uri) ? "pin.slash" : "pin",
+                title: library.isPinned(playlist.uri) ? "Unpin" : "Pin"
+            ) {
+                library.togglePin(playlist.uri)
+                dismiss()
+            }
+
+            if canEdit {
+                MenuButton(symbol: "line.3.horizontal", title: "Edit playlist", enabled: isReady) {
+                    dismiss()
+                    onEdit()
+                }
+            }
+
+            if isOwned {
+                MenuButton(symbol: "pencil", title: "Name and details") {
+                    choose(.details)
+                }
+                MenuButton(symbol: "photo", title: "Change cover") {
+                    choose(.cover)
+                }
+                MenuButton(symbol: "trash", title: "Delete playlist", destructive: true) {
+                    confirmDelete = true
                 }
             }
         }
-        .presentationDetents([.fraction(0.8), .large], selection: $detent)
-        .onChange(of: path) { detent = path.isEmpty ? .fraction(0.8) : .large }
+        .confirmationDialog("Delete playlist", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                Task { await library.setSaved(playlist, saved: false) }
+                dismiss()
+                onDeleted()
+            }
+        }
         .task {
             if library.isSample { return }
             let box: FollowersBox? = try? await library.api.get("playlists/\(playlist.id)", query: ["fields": "followers(total)"])
@@ -237,12 +245,11 @@ struct PlaylistMenuSheet: View {
 struct AlbumMenuSheet: View {
     let album: Album
     let tracks: [Track]
+    let onSelect: (MenuDestination) -> Void
 
     @Environment(LibraryStore.self) private var library
     @Environment(QueueStore.self) private var queue
     @Environment(\.dismiss) private var dismiss
-    @State private var path: [MenuPage] = []
-    @State private var detent: PresentationDetent = .fraction(0.65)
 
     private var shareURL: URL {
         URL(string: "https://open.spotify.com/album/\(album.id)") ?? URL(string: "https://open.spotify.com")!
@@ -255,77 +262,91 @@ struct AlbumMenuSheet: View {
     private var isSaved: Bool { library.isSaved(album) }
 
     var body: some View {
-        NavigationStack(path: $path) {
-            List {
-                MenuHeader(imageURL: album.images.url(atLeast: 100), title: album.name, subtitle: subtitle)
+        MenuContainer {
+            MenuHeader(imageURL: album.images.url(atLeast: 100), title: album.name, subtitle: subtitle)
 
-                Section {
-
-                ShareLink(item: shareURL) {
-                    MenuRow(symbol: "square.and.arrow.up", title: "Share")
-                }
-
-                Button {
-                    Task { await library.setSaved(album, saved: !isSaved) }
-                    dismiss()
-                } label: {
-                    MenuRow(
-                        symbol: isSaved ? "checkmark.circle.fill" : "plus.circle",
-                        title: isSaved ? "Remove from library" : "Save to library",
-                        isOn: isSaved
-                    )
-                }
-
-                Button {
-                    Task { await queue.add(tracks: tracks) }
-                    dismiss()
-                } label: {
-                    MenuRow(symbol: "text.line.last.and.arrowtriangle.forward", title: "Add to queue")
-                }
-                .disabled(tracks.isEmpty)
-
-                NavigationLink(value: MenuPage.addToPlaylist) {
-                    MenuRow(symbol: "text.badge.plus", title: "Add to playlist")
-                }
-                .disabled(tracks.isEmpty)
-
-                Button {
-                    library.toggleDownloaded(album.uri)
-                    dismiss()
-                } label: {
-                    MenuRow(
-                        symbol: library.isDownloaded(album.uri) ? "arrow.down.circle.fill" : "arrow.down.circle",
-                        title: library.isDownloaded(album.uri) ? "Remove download mark" : "Mark as downloaded",
-                        isOn: library.isDownloaded(album.uri)
-                    )
-                }
-
-                Button {
-                    library.togglePin(album.uri)
-                    dismiss()
-                } label: {
-                    MenuRow(
-                        symbol: library.isPinned(album.uri) ? "pin.slash" : "pin",
-                        title: library.isPinned(album.uri) ? "Unpin" : "Pin"
-                    )
-                }
-                }
-                .listRowSeparator(.hidden)
+            ShareLink(item: shareURL) {
+                MenuRow(symbol: "square.and.arrow.up", title: "Share")
             }
-            .listStyle(.plain)
-            .environment(\.defaultMinListRowHeight, 46)
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: MenuPage.self) { _ in
-                AddToPlaylistView(
-                    title: album.name,
-                    imageURL: album.images.url(atLeast: 100),
-                    uris: tracks.map(\.uri),
-                    excludingID: nil
-                )
+            .buttonStyle(.plain)
+
+            MenuButton(
+                symbol: isSaved ? "checkmark.circle.fill" : "plus.circle",
+                title: isSaved ? "Remove from library" : "Save to library",
+                isOn: isSaved
+            ) {
+                Task { await library.setSaved(album, saved: !isSaved) }
+                dismiss()
+            }
+
+            MenuButton(symbol: "text.line.last.and.arrowtriangle.forward", title: "Add to queue", enabled: !tracks.isEmpty) {
+                Task { await queue.add(tracks: tracks) }
+                dismiss()
+            }
+
+            MenuButton(symbol: "text.badge.plus", title: "Add to playlist", enabled: !tracks.isEmpty) {
+                onSelect(.addToPlaylist)
+                dismiss()
+            }
+
+            MenuButton(
+                symbol: library.isDownloaded(album.uri) ? "arrow.down.circle.fill" : "arrow.down.circle",
+                title: library.isDownloaded(album.uri) ? "Remove download mark" : "Mark as downloaded",
+                isOn: library.isDownloaded(album.uri)
+            ) {
+                library.toggleDownloaded(album.uri)
+                dismiss()
+            }
+
+            MenuButton(
+                symbol: library.isPinned(album.uri) ? "pin.slash" : "pin",
+                title: library.isPinned(album.uri) ? "Unpin" : "Pin"
+            ) {
+                library.togglePin(album.uri)
+                dismiss()
             }
         }
-        .presentationDetents([.fraction(0.65), .large], selection: $detent)
-        .onChange(of: path) { detent = path.isEmpty ? .fraction(0.65) : .large }
+    }
+}
+
+struct MenuDestinationSheet: View {
+    let destination: MenuDestination
+    var playlist: Playlist?
+    var album: Album?
+    let tracks: [Track]
+    let onAdded: (Track, String?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            content
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(role: .close) { dismiss() }
+                    }
+                }
+        }
+        .presentationDetents([.large])
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch destination {
+        case .addSongs:
+            if let playlist { AddSongsView(playlist: playlist, onAdded: onAdded) }
+        case .addToPlaylist:
+            AddToPlaylistView(
+                title: playlist?.name ?? album?.name ?? "",
+                imageURL: (playlist?.images ?? album?.images).url(atLeast: 100),
+                uris: tracks.map(\.uri),
+                excludingID: playlist?.id
+            )
+        case .details:
+            if let playlist { PlaylistDetailsForm(playlist: playlist) }
+        case .cover:
+            if let playlist { PlaylistCoverView(playlist: playlist) }
+        }
     }
 }
 
@@ -655,5 +676,122 @@ struct AddToPlaylistView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+}
+
+struct PlaylistCoverView: View {
+    let playlist: Playlist
+
+    @Environment(LibraryStore.self) private var library
+    @Environment(\.dismiss) private var dismiss
+    @State private var item: PhotosPickerItem?
+    @State private var preview: UIImage?
+    @State private var uploading = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Group {
+                if let preview {
+                    Image(uiImage: preview)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    ArtworkView(url: playlist.images.url(atLeast: 640), cornerRadius: 0)
+                }
+            }
+            .frame(width: 260, height: 260)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 16, y: 8)
+
+            PhotosPicker(selection: $item, matching: .images) {
+                Label("Choose photo", systemImage: "photo.on.rectangle")
+                    .font(.headline)
+                    .padding(.horizontal, 12)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 24)
+        .frame(maxWidth: .infinity)
+        .navigationTitle("Change cover")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if uploading {
+                    ProgressView()
+                } else {
+                    Button("Save") { Task { await upload() } }
+                        .disabled(preview == nil)
+                }
+            }
+        }
+        .onChange(of: item) { Task { await load() } }
+    }
+
+    private func load() async {
+        errorMessage = nil
+        guard let item, let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else { return }
+        preview = Self.squared(image, side: 640)
+    }
+
+    private func upload() async {
+        guard let preview, let jpeg = Self.jpeg(preview) else { return }
+        uploading = true
+        errorMessage = nil
+        defer { uploading = false }
+        if library.isSample {
+            dismiss()
+            return
+        }
+        do {
+            try await library.api.uploadJPEG("playlists/\(playlist.id)/images", base64: jpeg.base64EncodedString())
+            dismiss()
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                await library.refreshImages(of: playlist)
+            }
+        } catch let error as APIError where error.status == 401 || error.status == 403 {
+            errorMessage = "Sign out and sign in again to allow cover uploads"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private static func squared(_ image: UIImage, side: CGFloat) -> UIImage {
+        let size = image.size
+        let crop = min(size.width, size.height)
+        let origin = CGPoint(x: (size.width - crop) / 2, y: (size.height - crop) / 2)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format)
+        return renderer.image { _ in
+            let scale = side / crop
+            image.draw(in: CGRect(
+                x: -origin.x * scale,
+                y: -origin.y * scale,
+                width: size.width * scale,
+                height: size.height * scale
+            ))
+        }
+    }
+
+    private static func jpeg(_ image: UIImage) -> Data? {
+        var quality: CGFloat = 0.85
+        while quality > 0.15 {
+            if let data = image.jpegData(compressionQuality: quality), data.count <= 180_000 { return data }
+            quality -= 0.1
+        }
+        return image.jpegData(compressionQuality: 0.15)
     }
 }

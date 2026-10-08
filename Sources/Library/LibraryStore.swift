@@ -68,6 +68,14 @@ final class LibraryStore {
 
     func report(_ text: String) { message = text }
 
+    func refreshImages(of playlist: Playlist) async {
+        struct Images: Decodable { let images: [SpotifyImage]? }
+        guard !isSample,
+              let box: Images = try? await api.get("playlists/\(playlist.id)", query: ["fields": "images"]),
+              let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[index].images = box.images
+    }
+
     func updatePlaylist(_ playlist: Playlist, name: String, description: String, isPublic: Bool, collaborative: Bool) async throws {
         if !isSample {
             var body: [String: Any] = ["name": name, "description": description, "public": isPublic]

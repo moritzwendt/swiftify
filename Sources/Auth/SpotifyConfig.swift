@@ -21,6 +21,7 @@ enum SpotifyConfig {
         "user-read-recently-played",
         "user-top-read",
         "user-follow-read",
+        "ugc-image-upload",
         "app-remote-control"
     ]
 
