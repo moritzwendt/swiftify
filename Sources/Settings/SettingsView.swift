@@ -3,13 +3,16 @@ import SwiftUI
 struct ProfileButton: View {
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
+    @Environment(ChromeState.self) private var chrome
 
     private var initial: String {
         String((library.me?.displayName ?? "S").prefix(1)).uppercased()
     }
 
     var body: some View {
-        NavigationLink(value: Route.settings) {
+        Button {
+            chrome.showsSettings = true
+        } label: {
             if let url = library.me?.images.url(atLeast: 64) {
                 ArtworkView(url: url, circle: true)
                     .frame(width: 32, height: 32)
@@ -54,6 +57,7 @@ struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(AuthManager.self) private var auth
     @Environment(LibraryStore.self) private var library
+    @Environment(\.dismiss) private var dismiss
 
     private var appVersion: String {
         let info = Bundle.main.infoDictionary
@@ -131,7 +135,6 @@ struct SettingsView: View {
             Section {
                 SettingsRow(title: "Playback test", symbol: "hammer.fill", color: .indigo) {
                     PlaybackTestView(auth: auth)
-                        .hidesBottomBars()
                 }
             }
 
@@ -141,7 +144,11 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesBottomBars()
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(role: .close) { dismiss() }
+            }
+        }
     }
 }
 
@@ -200,7 +207,6 @@ struct AppearanceSettings: View {
         }
         .navigationTitle("Appearance")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesBottomBars()
     }
 }
 
@@ -225,7 +231,6 @@ struct HomeSettings: View {
         }
         .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesBottomBars()
     }
 }
 
@@ -252,7 +257,6 @@ struct LibrarySettings: View {
         }
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesBottomBars()
     }
 }
 
@@ -300,7 +304,6 @@ struct PlaybackSettings: View {
         }
         .navigationTitle("Playback")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesBottomBars()
         .task { await loadDevices() }
     }
 
@@ -330,7 +333,6 @@ struct StorageSettings: View {
         }
         .navigationTitle("Storage and reset")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesBottomBars()
         .confirmationDialog("Clear download marks", isPresented: $confirmClearMarks, titleVisibility: .visible) {
             Button("Clear", role: .destructive) { library.clearDownloaded() }
         }

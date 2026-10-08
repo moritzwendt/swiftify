@@ -100,7 +100,6 @@ struct CacheSettings: View {
         }
         .navigationTitle("Cache")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesBottomBars()
         .task(id: warmer.done) { await refresh() }
         .onChange(of: warmer.isRunning) { Task { await refresh() } }
         .onChange(of: settings.imageCacheLimitMB) {

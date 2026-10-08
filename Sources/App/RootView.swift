@@ -72,7 +72,7 @@ struct MainTabView: View {
             Tab("Create", systemImage: "plus", value: AppTab.create) { Color.clear }
         }
         .tabBarMinimizeBehavior(settings.tabBarMinimizes ? .onScrollDown : .never)
-        .tabViewBottomAccessory(isEnabled: player.track != nil && !chrome.hidesPlayerBar) {
+        .tabViewBottomAccessory(isEnabled: player.track != nil) {
             MiniPlayer(namespace: playerSpace) { showPlayer = true }
         }
         .onChange(of: selection) { old, new in
@@ -82,6 +82,9 @@ struct MainTabView: View {
             }
         }
         .sheet(isPresented: $showCreate) { CreateSheet() }
+        .sheet(isPresented: Binding(get: { chrome.showsSettings }, set: { chrome.showsSettings = $0 })) {
+            NavigationStack { SettingsView() }
+        }
         .fullScreenCover(isPresented: $showPlayer) {
             FullPlayerView()
                 .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
