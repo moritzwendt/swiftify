@@ -5,6 +5,7 @@ import UIKit
 private struct PendingPlayback {
     let body: [String: Any]?
     let pinsFirstTrack: Bool
+    let forcesShuffle: Bool
     let date: Date
     var leftApp = false
 }
@@ -145,6 +146,12 @@ final class PlayerManager {
         localContextKey = nil
         contextURI = context
         await startPlayback(body, pinsFirstTrack: offset != nil, showing: track)
+    }
+
+    func playShuffled(context: String) async {
+        localContextKey = nil
+        contextURI = context
+        await startPlayback(["context_uri": context], forcesShuffle: true)
     }
 
     func play(uris: [String], startAt index: Int? = nil, key: String? = nil, showing track: Track? = nil) async {
@@ -331,7 +338,7 @@ final class PlayerManager {
         Task { await refreshLiked() }
     }
 
-    private func startPlayback(_ body: [String: Any]?, pinsFirstTrack: Bool = false, showing next: Track? = nil) async {
+    private func startPlayback(_ body: [String: Any]?, pinsFirstTrack: Bool = false, forcesShuffle: Bool = false, showing next: Track? = nil) async {
         errorMessage = nil
         pending = nil
         let previous = (track: track, isPlaying: isPlaying, position: positionMs(at: Date()))
@@ -341,9 +348,9 @@ final class PlayerManager {
             setPlayingLocally(true)
         }
         do {
-            try await sendPlay(body, deviceID: settings.preferredDeviceID, pinsFirstTrack: pinsFirstTrack)
+            try await sendPlay(body, deviceID: settings.preferredDeviceID, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle)
         } catch let error as APIError where error.status == 404 {
-            await playOnFirstDevice(body, pinsFirstTrack: pinsFirstTrack)
+            await playOnFirstDevice(body, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -358,13 +365,14 @@ final class PlayerManager {
         await refreshState(after: 0.6)
     }
 
-    private func sendPlay(_ body: [String: Any]?, deviceID: String?, pinsFirstTrack: Bool) async throws {
+    private func sendPlay(_ body: [String: Any]?, deviceID: String?, pinsFirstTrack: Bool, forcesShuffle: Bool = false) async throws {
         var query: [String: String] = [:]
         if let deviceID { query["device_id"] = deviceID }
-        let reshuffle = pinsFirstTrack && shuffle
-        if reshuffle {
+        let reshuffle = pinsFirstTrack && shuffle && !forcesShuffle
+        if reshuffle || forcesShuffle {
             holdsShuffle = true
-            try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": "false"]) { $1 })
+            if forcesShuffle { shuffle = true }
+            try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": forcesShuffle ? "true" : "false"]) { $1 })
         }
         var failure: Error?
         do {
@@ -375,15 +383,15 @@ final class PlayerManager {
         if reshuffle {
             try? await Task.sleep(for: .milliseconds(500))
             try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": "true"]) { $1 })
-            holdsShuffle = false
         }
+        holdsShuffle = false
         if let failure { throw failure }
     }
 
-    private func playOnFirstDevice(_ body: [String: Any]?, pinsFirstTrack: Bool) async {
+    private func playOnFirstDevice(_ body: [String: Any]?, pinsFirstTrack: Bool, forcesShuffle: Bool = false) async {
         do {
             guard let id = try await firstDeviceID() else {
-                pending = PendingPlayback(body: body, pinsFirstTrack: pinsFirstTrack, date: Date())
+                pending = PendingPlayback(body: body, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle, date: Date())
                 isPlaying = false
                 expected = nil
                 expectedPlaying = nil
@@ -393,7 +401,7 @@ final class PlayerManager {
                 }
                 return
             }
-            try await sendPlay(body, deviceID: id, pinsFirstTrack: pinsFirstTrack)
+            try await sendPlay(body, deviceID: id, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -421,7 +429,7 @@ final class PlayerManager {
             if attempt > 0 { try? await Task.sleep(for: .seconds(1)) }
             do {
                 guard let id = try await firstDeviceID() else { continue }
-                try await sendPlay(request.body, deviceID: id, pinsFirstTrack: request.pinsFirstTrack)
+                try await sendPlay(request.body, deviceID: id, pinsFirstTrack: request.pinsFirstTrack, forcesShuffle: request.forcesShuffle)
                 await refreshState(after: 0.6)
                 return
             } catch {

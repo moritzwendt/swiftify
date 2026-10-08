@@ -77,6 +77,14 @@ final class MembershipStore {
         persist()
     }
 
+    func recordAll(playlistID: String, uris: [String], snapshot: String?) {
+        var set = tracks[playlistID] ?? []
+        set.formUnion(uris)
+        tracks[playlistID] = set
+        if let snapshot { snapshots[playlistID] = snapshot }
+        persist()
+    }
+
     func record(playlistID: String, uri: String, added: Bool, snapshot: String?) {
         var set = tracks[playlistID] ?? []
         if added { set.insert(uri) } else { set.remove(uri) }

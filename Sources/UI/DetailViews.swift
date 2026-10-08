@@ -7,6 +7,10 @@ struct DetailHeader: View {
     let title: String
     let subtitle: String
     let isPlaying: Bool
+    var isShuffling = false
+    var onShuffle: (() -> Void)?
+    var onAdd: (() -> Void)?
+    var addEnabled = true
     let onPlay: () -> Void
 
     var body: some View {
@@ -30,11 +34,33 @@ struct DetailHeader: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            PlayButton(isPlaying: isPlaying, action: onPlay)
-                .padding(.top, 4)
+            HStack(spacing: 20) {
+                if let onShuffle {
+                    sideButton("shuffle", label: "Shuffle", isOn: isShuffling, action: onShuffle)
+                }
+                PlayButton(isPlaying: isPlaying, action: onPlay)
+                if let onAdd {
+                    sideButton("plus.circle", label: "Add to playlist", isOn: false, action: onAdd)
+                        .disabled(!addEnabled)
+                        .opacity(addEnabled ? 1 : 0.4)
+                }
+            }
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+    }
+
+    private func sideButton(_ symbol: String, label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 26))
+                .foregroundStyle(isOn ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -45,6 +71,7 @@ struct PlaylistDetailView: View {
     @Environment(AppSettings.self) private var settings
     @State private var tracks: [Track] = []
     @State private var isComplete = false
+    @State private var showAdd = false
 
     private var canList: Bool { library.canListTracks(of: playlist) }
 
@@ -60,7 +87,11 @@ struct PlaylistDetailView: View {
                 imageURL: playlist.images.url(atLeast: 640),
                 title: playlist.name,
                 subtitle: subtitle,
-                isPlaying: player.isPlaying(context: playlist.uri)
+                isPlaying: player.isPlaying(context: playlist.uri),
+                isShuffling: player.shuffle,
+                onShuffle: { Task { await player.playShuffled(context: playlist.uri) } },
+                onAdd: { showAdd = true },
+                addEnabled: canList && isComplete && !tracks.isEmpty
             ) {
                 Task { await player.playOrPause(context: playlist.uri) }
             }
@@ -88,12 +119,21 @@ struct PlaylistDetailView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAdd) {
+            AddToPlaylistSheet(
+                title: playlist.name,
+                imageURL: playlist.images.url(atLeast: 100),
+                uris: tracks.map(\.uri),
+                excludingID: playlist.id
+            )
+        }
         .task { await load() }
     }
 
     private func load() async {
         if library.isSample {
             tracks = SampleData.tracks
+            isComplete = true
             return
         }
         guard canList, !isComplete else { return }
@@ -124,6 +164,7 @@ struct AlbumDetailView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
     @State private var tracks: [Track] = []
+    @State private var showAdd = false
 
     private var subtitle: String {
         [album.artistLine, album.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " \u{2022} ")
@@ -135,7 +176,11 @@ struct AlbumDetailView: View {
                 imageURL: album.images.url(atLeast: 640),
                 title: album.name,
                 subtitle: subtitle,
-                isPlaying: player.isPlaying(context: album.uri)
+                isPlaying: player.isPlaying(context: album.uri),
+                isShuffling: player.shuffle,
+                onShuffle: { Task { await player.playShuffled(context: album.uri) } },
+                onAdd: { showAdd = true },
+                addEnabled: !tracks.isEmpty
             ) {
                 Task { await player.playOrPause(context: album.uri) }
             }
@@ -155,6 +200,13 @@ struct AlbumDetailView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAdd) {
+            AddToPlaylistSheet(
+                title: album.name,
+                imageURL: album.images.url(atLeast: 100),
+                uris: tracks.map(\.uri)
+            )
+        }
         .task {
             if let embedded = album.tracks?.items, !embedded.isEmpty {
                 tracks = embedded

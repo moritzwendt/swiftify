@@ -33,6 +33,7 @@
 		A3BAAC4BA11568F47B18AD50 /* SwiftifyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */; };
 		A9F7C2525563870D3BB54F3A /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2845162E089807930C2FF0 /* SearchView.swift */; };
 		AA3D0E0945D07788FFAB1E5D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448568EAAECAFD202065608F /* AppSettings.swift */; };
+		B469FBA0F1BFE3E8F34643F6 /* AddToPlaylistSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5086888246CC9E9393D0D8F1 /* AddToPlaylistSheet.swift */; };
 		B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AB62131834C889BBB1EB2 /* AuthManager.swift */; };
 		BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5125EC825CC5FD3461D2E70A /* CacheSettings.swift */; };
 		D43019C252028289DC589E1D /* CreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63152471936FB65D84D134F /* CreateSheet.swift */; };
@@ -52,6 +53,7 @@
 		36B875DCE444C5608C150FB1 /* MembershipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipStore.swift; sourceTree = "<group>"; };
 		448568EAAECAFD202065608F /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftifyApp.swift; sourceTree = "<group>"; };
+		5086888246CC9E9393D0D8F1 /* AddToPlaylistSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToPlaylistSheet.swift; sourceTree = "<group>"; };
 		5125EC825CC5FD3461D2E70A /* CacheSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheSettings.swift; sourceTree = "<group>"; };
 		54D5DB397DA92DA5F03AFE50 /* Lyrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lyrics.swift; sourceTree = "<group>"; };
 		5A2845162E089807930C2FF0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 		4AC326290425455771E49CAF /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				5086888246CC9E9393D0D8F1 /* AddToPlaylistSheet.swift */,
 				9CBE2F2DF5C4EE0DC2DB1B2D /* ChromeState.swift */,
 				B6077B53A716C4C9707F0B4D /* Components.swift */,
 				E63152471936FB65D84D134F /* CreateSheet.swift */,
@@ -333,6 +336,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B469FBA0F1BFE3E8F34643F6 /* AddToPlaylistSheet.swift in Sources */,
 				AA3D0E0945D07788FFAB1E5D /* AppSettings.swift in Sources */,
 				B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */,
 				BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */,
