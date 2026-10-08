@@ -5,6 +5,7 @@ struct MiniPlayer: View {
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
     @State private var dragX: CGFloat = 0
     @State private var swipeCount = 0
+    let namespace: Namespace.ID
     let onTap: () -> Void
 
     var body: some View {
@@ -12,6 +13,7 @@ struct MiniPlayer: View {
         HStack(spacing: 12) {
             ArtworkView(url: player.artworkURL(atLeast: 100), cornerRadius: 6)
                 .frame(width: 36, height: 36)
+                .matchedTransitionSource(id: "player", in: namespace)
             VStack(alignment: .leading, spacing: 0) {
                 Text(player.track?.name ?? "")
                     .font(.subheadline.weight(.semibold))
@@ -124,10 +126,7 @@ struct ScrubberView: View {
 struct FullPlayerView: View {
     @Environment(PlayerManager.self) private var player
     @Environment(AppSettings.self) private var settings
-    @Environment(\.dismiss) private var dismiss
     @State private var tint: Color = .gray
-    @State private var dragOffset: CGFloat = 0
-    @State private var screenHeight: CGFloat = 900
     @State private var showSave = false
 
     var body: some View {
@@ -151,8 +150,6 @@ struct FullPlayerView: View {
                         .scaleEffect(player.isPlaying ? 1 : 0.86)
                         .animation(.spring(duration: 0.5, bounce: 0.3), value: player.isPlaying)
                 }
-                .contentShape(Rectangle())
-                .gesture(dismissGesture)
 
                 Spacer(minLength: 16)
 
@@ -219,19 +216,12 @@ struct FullPlayerView: View {
                 .padding(.bottom, 48)
             }
             .padding(.horizontal, 28)
-            .offset(y: dragOffset)
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
-        .presentationBackground(.clear)
         .sheet(isPresented: $showSave) {
             if let track = player.track {
                 SaveToSheet(track: track, autoLike: !player.isLiked)
-            }
-        }
-        .background {
-            GeometryReader { geometry in
-                Color.clear.onAppear { screenHeight = geometry.size.height }
             }
         }
         .haptic(.impact, trigger: player.isPlaying)
@@ -244,26 +234,6 @@ struct FullPlayerView: View {
                 withAnimation(.easeInOut(duration: 0.6)) { tint = color }
             }
         }
-    }
-
-    private var dismissGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                dragOffset = max(0, value.translation.height)
-            }
-            .onEnded { value in
-                if value.translation.height > 120 || value.predictedEndTranslation.height > 400 {
-                    withAnimation(.easeIn(duration: 0.22)) {
-                        dragOffset = screenHeight
-                    } completion: {
-                        var transaction = Transaction()
-                        transaction.disablesAnimations = true
-                        withTransaction(transaction) { dismiss() }
-                    }
-                } else {
-                    withAnimation(.spring(duration: 0.35, bounce: 0.2)) { dragOffset = 0 }
-                }
-            }
     }
 
     private func transportButton(

@@ -60,6 +60,7 @@ struct MainTabView: View {
     @State private var selection: AppTab = .home
     @State private var showCreate = false
     @State private var showPlayer = false
+    @Namespace private var playerSpace
 
     var body: some View {
         TabView(selection: $selection) {
@@ -70,7 +71,7 @@ struct MainTabView: View {
         }
         .tabBarMinimizeBehavior(settings.tabBarMinimizes ? .onScrollDown : .never)
         .tabViewBottomAccessory(isEnabled: player.track != nil) {
-            MiniPlayer { showPlayer = true }
+            MiniPlayer(namespace: playerSpace) { showPlayer = true }
         }
         .onChange(of: selection) { old, new in
             if new == .create {
@@ -79,7 +80,10 @@ struct MainTabView: View {
             }
         }
         .sheet(isPresented: $showCreate) { CreateSheet() }
-        .fullScreenCover(isPresented: $showPlayer) { FullPlayerView() }
+        .fullScreenCover(isPresented: $showPlayer) {
+            FullPlayerView()
+                .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
+        }
         .overlay(alignment: .top) { errorToast }
         .task {
             await library.load()
