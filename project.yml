@@ -8,12 +8,29 @@ settings:
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: YZ78A69UF8
     CODE_SIGN_STYLE: Automatic
+packages:
+  SpotifyiOS:
+    url: https://github.com/spotify/ios-sdk
+    exactVersion: 5.0.1
 targets:
   Swiftify:
     type: application
     platform: iOS
     sources:
       - Sources
+    dependencies:
+      - package: SpotifyiOS
+    info:
+      path: Config/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleURLTypes:
+          - CFBundleURLName: com.moritzwendt.swiftify
+            CFBundleURLSchemes:
+              - swiftify
+        LSApplicationQueriesSchemes:
+          - spotify
     postBuildScripts:
       - name: Generate Build Number
         script: '"$SRCROOT/Scripts/generate_build_number.sh"'

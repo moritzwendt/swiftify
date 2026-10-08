@@ -25,6 +25,7 @@
 		A3BAAC4BA11568F47B18AD50 /* SwiftifyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */; };
 		A9F7C2525563870D3BB54F3A /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2845162E089807930C2FF0 /* SearchView.swift */; };
 		AA3D0E0945D07788FFAB1E5D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448568EAAECAFD202065608F /* AppSettings.swift */; };
+		AE8666AA57E364C93B0EED80 /* SpotifyiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D40E6AA73E841FDDCA5E784B /* SpotifyiOS */; };
 		B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AB62131834C889BBB1EB2 /* AuthManager.swift */; };
 		D43019C252028289DC589E1D /* CreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63152471936FB65D84D134F /* CreateSheet.swift */; };
 		DB5A83FE33457199874C0294 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9253737EC9EB49D97054D3CF /* Player.swift */; };
@@ -60,6 +61,17 @@
 		E47E07B50B8AB7364BD96D94 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E63152471936FB65D84D134F /* CreateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		77CFEEDE689207CD9546B5FD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AE8666AA57E364C93B0EED80 /* SpotifyiOS in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		14C49127DEFC66E8A7ADEB3B /* Models */ = {
@@ -181,6 +193,7 @@
 			buildConfigurationList = B952AB3A61690EF0EBD22171 /* Build configuration list for PBXNativeTarget "Swiftify" */;
 			buildPhases = (
 				053251AC81BC3ED935DF0356 /* Sources */,
+				77CFEEDE689207CD9546B5FD /* Frameworks */,
 				C35806083237FE4868E29DE5 /* Generate Build Number */,
 			);
 			buildRules = (
@@ -189,6 +202,7 @@
 			);
 			name = Swiftify;
 			packageProductDependencies = (
+				D40E6AA73E841FDDCA5E784B /* SpotifyiOS */,
 			);
 			productName = Swiftify;
 			productReference = 8EBBAD4CA1D80BCF47C42430 /* Swiftify.app */;
@@ -218,6 +232,9 @@
 			);
 			mainGroup = 71281DD93A82B804039C1E1B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				640AB1A462EC0BC22F39AA76 /* XCRemoteSwiftPackageReference "ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9F7C558FB7D7685AA03F29F0 /* Products */;
 			projectDirPath = "";
@@ -294,6 +311,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Swiftify;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -374,6 +392,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Swiftify;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -475,6 +494,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		640AB1A462EC0BC22F39AA76 /* XCRemoteSwiftPackageReference "ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/spotify/ios-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = 5.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D40E6AA73E841FDDCA5E784B /* SpotifyiOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 640AB1A462EC0BC22F39AA76 /* XCRemoteSwiftPackageReference "ios-sdk" */;
+			productName = SpotifyiOS;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AE621DF9396F7DD7613C711A /* Project object */;
 }
