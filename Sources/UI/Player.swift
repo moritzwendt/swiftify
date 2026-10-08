@@ -193,15 +193,15 @@ struct FullPlayerView: View {
                             savedWhenOpened = isSaved
                             showSave = true
                         } label: {
-                            Image(systemName: isSaved ? "checkmark" : "plus")
-                                .font(.title3.weight(.semibold))
+                            Image(systemName: isSaved ? "checkmark.circle.fill" : "plus.circle")
+                                .font(.system(size: 28))
                                 .foregroundStyle(isSaved ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
                                 .contentTransition(.symbolEffect(.replace))
-                                .frame(width: 30, height: 30)
+                                .frame(width: 40, height: 40)
+                                .contentShape(Circle())
                         }
                         .accessibilityLabel("Save to")
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
+                        .buttonStyle(.plain)
                     }
 
                     ScrubberView()
