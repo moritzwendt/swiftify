@@ -4,6 +4,7 @@ import SwiftUI
 struct SwiftifyApp: App {
     @State private var auth: AuthManager
     @State private var settings: AppSettings
+    @State private var chrome = ChromeState()
     @State private var library: LibraryStore
     @State private var player: PlayerManager
 
@@ -29,6 +30,7 @@ struct SwiftifyApp: App {
                 .environment(library)
                 .environment(player)
                 .environment(settings)
+                .environment(chrome)
                 .tint(settings.accent)
                 .preferredColorScheme(settings.appearance.colorScheme)
                 .onChange(of: auth.isAuthenticated) { _, signedIn in

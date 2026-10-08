@@ -56,6 +56,7 @@ struct MainTabView: View {
     @Environment(PlayerManager.self) private var player
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
+    @Environment(ChromeState.self) private var chrome
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .home
     @State private var showCreate = false
@@ -70,7 +71,7 @@ struct MainTabView: View {
             Tab("Create", systemImage: "plus", value: AppTab.create) { Color.clear }
         }
         .tabBarMinimizeBehavior(settings.tabBarMinimizes ? .onScrollDown : .never)
-        .tabViewBottomAccessory(isEnabled: player.track != nil) {
+        .tabViewBottomAccessory(isEnabled: player.track != nil && !chrome.hidesPlayerBar) {
             MiniPlayer(namespace: playerSpace) { showPlayer = true }
         }
         .onChange(of: selection) { old, new in
