@@ -1,5 +1,12 @@
 import Foundation
 import Observation
+import UIKit
+
+private struct PendingPlayback {
+    let body: [String: Any]?
+    let date: Date
+    var leftApp = false
+}
 
 @MainActor
 @Observable
@@ -23,6 +30,7 @@ final class PlayerManager {
     @ObservationIgnored var isSample = false
     @ObservationIgnored private var sampleQueue: [Track] = []
     @ObservationIgnored private var sampleIndex = 0
+    @ObservationIgnored private var pending: PendingPlayback?
 
     init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
@@ -263,6 +271,7 @@ final class PlayerManager {
 
     private func startPlayback(_ body: [String: Any]?) async {
         errorMessage = nil
+        pending = nil
         var query: [String: String] = [:]
         if let device = settings.preferredDeviceID { query["device_id"] = device }
         do {
@@ -277,10 +286,12 @@ final class PlayerManager {
 
     private func playOnFirstDevice(_ body: [String: Any]?) async {
         do {
-            let list: DevicesResponse = try await api.get("me/player/devices")
-            guard let device = list.devices.first(where: \.isActive) ?? list.devices.first,
-                  let id = device.id else {
-                errorMessage = "Open Spotify and play a song once"
+            guard let id = try await firstDeviceID() else {
+                pending = PendingPlayback(body: body, date: Date())
+                if await !openSpotify() {
+                    pending = nil
+                    errorMessage = Self.noDeviceMessage
+                }
                 return
             }
             try await api.perform("PUT", "me/player/play", query: ["device_id": id], body: body)
@@ -288,4 +299,39 @@ final class PlayerManager {
             errorMessage = error.localizedDescription
         }
     }
+
+    private func firstDeviceID() async throws -> String? {
+        let list: DevicesResponse = try await api.get("me/player/devices")
+        return (list.devices.first(where: \.isActive) ?? list.devices.first)?.id
+    }
+
+    private func openSpotify() async -> Bool {
+        guard let url = URL(string: "spotify://") else { return false }
+        return await UIApplication.shared.open(url)
+    }
+
+    func appDidEnterBackground() {
+        pending?.leftApp = true
+    }
+
+    func resumePendingPlayback() async {
+        guard let request = pending, request.leftApp else { return }
+        pending = nil
+        guard Date().timeIntervalSince(request.date) < 600 else { return }
+        for attempt in 0..<4 {
+            if attempt > 0 { try? await Task.sleep(for: .seconds(1)) }
+            do {
+                guard let id = try await firstDeviceID() else { continue }
+                try await api.perform("PUT", "me/player/play", query: ["device_id": id], body: request.body)
+                await refreshState(after: 0.6)
+                return
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
+        }
+        errorMessage = Self.noDeviceMessage
+    }
+
+    private static let noDeviceMessage = "Open Spotify and play a song once"
 }

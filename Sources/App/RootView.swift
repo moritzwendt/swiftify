@@ -96,8 +96,10 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 player.startPolling()
+                Task { await player.resumePendingPlayback() }
             } else {
                 player.stopPolling()
+                if phase == .background { player.appDidEnterBackground() }
             }
         }
     }
