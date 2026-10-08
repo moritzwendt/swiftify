@@ -37,6 +37,7 @@ struct LibraryView: View {
     @Environment(PlayerManager.self) private var player
     @State private var filter: LibraryFilter?
     @State private var sub: LibrarySubFilter?
+    @State private var path: [Route] = []
 
     private var sort: LibrarySort {
         get { LibrarySort(rawValue: settings.librarySortRaw) ?? .recents }
@@ -128,14 +129,21 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
+        NavigationStack(path: $path) {
+            List {
+                sortRow
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
+
                 if settings.libraryGrid {
-                    gridContent
+                    gridRows
                 } else {
-                    listContent
+                    listRows
                 }
             }
+            .listStyle(.plain)
+            .refreshable { await library.load(force: true) }
             .safeAreaBar(edge: .top, spacing: 0) { header }
             .navigationTitle("Your Library")
             .navigationBarTitleDisplayMode(.inline)
@@ -162,90 +170,114 @@ struct LibraryView: View {
         }
     }
 
-    private var listContent: some View {
-        List {
-            sortRow
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16))
-
-            if showLiked {
-                NavigationLink(value: Route.likedSongs) {
-                    MediaRow(
-                        imageURL: nil,
-                        title: "Liked Songs",
-                        subtitle: "Playlist \u{2022} \(library.likedTotal) songs",
-                        liked: true
-                    )
-                }
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                .navigationLinkIndicatorVisibility(.hidden)
+    @ViewBuilder
+    private var listRows: some View {
+        if showLiked {
+            NavigationLink(value: Route.likedSongs) {
+                MediaRow(
+                    imageURL: nil,
+                    title: "Liked Songs",
+                    subtitle: "Playlist \u{2022} \(library.likedTotal) songs",
+                    liked: true
+                )
             }
-
-            ForEach(items) { item in
-                NavigationLink(value: item.route) {
-                    MediaRow(
-                        imageURL: item.imageURL,
-                        title: item.title,
-                        subtitle: item.subtitle,
-                        circle: item.circle,
-                        badge: library.isDownloaded(item.id),
-                        pinned: library.isPinned(item.id)
-                    )
-                }
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                .navigationLinkIndicatorVisibility(.hidden)
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                    Button {
-                        withAnimation(.snappy) { library.togglePin(item.id) }
-                    } label: {
-                        Label(
-                            library.isPinned(item.id) ? "Unpin" : "Pin",
-                            systemImage: library.isPinned(item.id) ? "pin.slash.fill" : "pin.fill"
-                        )
-                    }
-                    .tint(settings.accent)
-                }
-                .contextMenu { menuItems(item) }
-            }
+            .listRowSeparator(.hidden)
+            .listRowInsets(rowInsets)
+            .navigationLinkIndicatorVisibility(.hidden)
         }
-        .listStyle(.plain)
-        .refreshable { await library.load(force: true) }
+
+        ForEach(items) { item in
+            NavigationLink(value: item.route) {
+                MediaRow(
+                    imageURL: item.imageURL,
+                    title: item.title,
+                    subtitle: item.subtitle,
+                    circle: item.circle,
+                    badge: library.isDownloaded(item.id),
+                    pinned: library.isPinned(item.id)
+                )
+            }
+            .listRowSeparator(.hidden)
+            .listRowInsets(rowInsets)
+            .navigationLinkIndicatorVisibility(.hidden)
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    withAnimation(.snappy) { library.togglePin(item.id) }
+                } label: {
+                    Label(
+                        library.isPinned(item.id) ? "Unpin" : "Pin",
+                        systemImage: library.isPinned(item.id) ? "pin.slash.fill" : "pin.fill"
+                    )
+                }
+                .tint(settings.accent)
+            }
+            .contextMenu { menuItems(item) }
+        }
     }
 
-    private var gridContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                sortRow
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 16) {
-                    if showLiked {
-                        NavigationLink(value: Route.likedSongs) {
-                            gridCell(imageURL: nil, title: "Liked Songs", kind: "Playlist", liked: true)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    ForEach(items) { item in
-                        NavigationLink(value: item.route) {
-                            gridCell(
-                                imageURL: item.imageURL,
-                                title: item.title,
-                                kind: item.kind,
-                                circle: item.circle,
-                                pinned: library.isPinned(item.id),
-                                downloaded: library.isDownloaded(item.id)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu { menuItems(item) }
-                    }
+    private var rowInsets: EdgeInsets {
+        EdgeInsets(top: 11, leading: 16, bottom: 11, trailing: 16)
+    }
+
+    private struct GridEntry: Identifiable {
+        let item: LibraryItem?
+        var id: String { item?.id ?? "liked" }
+    }
+
+    private struct GridLine: Identifiable {
+        let entries: [GridEntry]
+        var id: String { entries.map(\.id).joined(separator: "|") }
+    }
+
+    private var gridLines: [GridLine] {
+        let entries = (showLiked ? [GridEntry(item: nil)] : []) + items.map { GridEntry(item: $0) }
+        return stride(from: 0, to: entries.count, by: 3).map {
+            GridLine(entries: Array(entries[$0..<min($0 + 3, entries.count)]))
+        }
+    }
+
+    private var gridRows: some View {
+        ForEach(gridLines) { line in
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(line.entries) { entry in
+                    gridButton(entry)
+                }
+                ForEach(0..<(3 - line.entries.count), id: \.self) { _ in
+                    Color.clear.frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         }
-        .refreshable { await library.load(force: true) }
+    }
+
+    @ViewBuilder
+    private func gridButton(_ entry: GridEntry) -> some View {
+        if let item = entry.item {
+            Button {
+                path.append(item.route)
+            } label: {
+                gridCell(
+                    imageURL: item.imageURL,
+                    title: item.title,
+                    kind: item.kind,
+                    circle: item.circle,
+                    pinned: library.isPinned(item.id),
+                    downloaded: library.isDownloaded(item.id)
+                )
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+            .contextMenu { menuItems(item) }
+        } else {
+            Button {
+                path.append(.likedSongs)
+            } label: {
+                gridCell(imageURL: nil, title: "Liked Songs", kind: "Playlist", liked: true)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+        }
     }
 
     private func gridCell(
@@ -319,10 +351,9 @@ struct LibraryView: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.subheadline.weight(.semibold))
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 6)
                         }
                         .buttonStyle(.glass)
+                        .controlSize(.small)
                         .accessibilityLabel("Clear filter")
                         chip(selected.rawValue, selected: true) {}
                         ForEach(subFilters(for: selected), id: \.rawValue) { value in
@@ -341,7 +372,7 @@ struct LibraryView: View {
             }
         }
         .scrollClipDisabled()
-        .frame(height: 52)
+        .frame(height: 44)
     }
 
     private func subFilters(for filter: LibraryFilter) -> [LibrarySubFilter] {
@@ -364,12 +395,14 @@ struct LibraryView: View {
                 chipLabel(title, selected: true)
             }
             .buttonStyle(.glassProminent)
+            .controlSize(.small)
             .tint(settings.accent)
         } else {
             Button(action: action) {
                 chipLabel(title, selected: false)
             }
             .buttonStyle(.glass)
+            .controlSize(.small)
         }
     }
 
@@ -377,8 +410,6 @@ struct LibraryView: View {
         Text(title)
             .font(.subheadline.weight(.medium))
             .foregroundStyle(selected ? settings.onAccent : .primary)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 6)
     }
 
     private var sortRow: some View {
@@ -394,7 +425,7 @@ struct LibraryView: View {
             .tint(.primary)
             Spacer()
             Button {
-                withAnimation(.snappy) { settings.libraryGrid.toggle() }
+                settings.libraryGrid.toggle()
             } label: {
                 Image(systemName: settings.libraryGrid ? "list.bullet" : "square.grid.2x2")
                     .font(.body.weight(.medium))
