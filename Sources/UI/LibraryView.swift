@@ -341,19 +341,41 @@ struct LibraryView: View {
             .padding(.horizontal, 16)
     }
 
+    @ViewBuilder
     private var chips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    if let selected = filter {
+        if filter == nil {
+            GeometryReader { geometry in
+                let widths = Self.fillWidths(
+                    LibraryFilter.allCases.map(\.rawValue),
+                    available: geometry.size.width,
+                    spacing: 8
+                )
+                GlassEffectContainer(spacing: 8) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(LibraryFilter.allCases.enumerated()), id: \.element) { index, value in
+                            chip(value.rawValue, selected: false, fill: true) {
+                                withAnimation(.snappy) { select(value) }
+                            }
+                            .frame(width: widths[index])
+                        }
+                    }
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+            }
+            .frame(height: 52)
+        } else if let selected = filter {
+            ScrollView(.horizontal, showsIndicators: false) {
+                GlassEffectContainer(spacing: 8) {
+                    HStack(spacing: 8) {
                         Button {
                             withAnimation(.snappy) { select(nil) }
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.subheadline.weight(.semibold))
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 6)
                         }
                         .buttonStyle(.glass)
-                        .controlSize(.small)
                         .accessibilityLabel("Clear filter")
                         chip(selected.rawValue, selected: true) {}
                         ForEach(subFilters(for: selected), id: \.rawValue) { value in
@@ -361,18 +383,21 @@ struct LibraryView: View {
                                 withAnimation(.snappy) { sub = sub == value ? nil : value }
                             }
                         }
-                    } else {
-                        ForEach(LibraryFilter.allCases, id: \.self) { value in
-                            chip(value.rawValue, selected: false) {
-                                withAnimation(.snappy) { select(value) }
-                            }
-                        }
                     }
                 }
             }
+            .scrollClipDisabled()
+            .frame(height: 52)
         }
-        .scrollClipDisabled()
-        .frame(height: 44)
+    }
+
+    private static func fillWidths(_ titles: [String], available: CGFloat, spacing: CGFloat) -> [CGFloat] {
+        let size = UIFont.preferredFont(forTextStyle: .subheadline).pointSize
+        let font = UIFont.systemFont(ofSize: size, weight: .medium)
+        let weights = titles.map { ($0 as NSString).size(withAttributes: [.font: font]).width + 24 }
+        let usable = available - spacing * CGFloat(max(titles.count - 1, 0))
+        let total = weights.reduce(0, +)
+        return weights.map { $0 / total * usable }
     }
 
     private func subFilters(for filter: LibraryFilter) -> [LibrarySubFilter] {
@@ -389,27 +414,30 @@ struct LibraryView: View {
     }
 
     @ViewBuilder
-    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+    private func chip(_ title: String, selected: Bool, fill: Bool = false, action: @escaping () -> Void) -> some View {
         if selected {
             Button(action: action) {
-                chipLabel(title, selected: true)
+                chipLabel(title, selected: true, fill: fill)
             }
             .buttonStyle(.glassProminent)
-            .controlSize(.small)
             .tint(settings.accent)
         } else {
             Button(action: action) {
-                chipLabel(title, selected: false)
+                chipLabel(title, selected: false, fill: fill)
             }
             .buttonStyle(.glass)
-            .controlSize(.small)
         }
     }
 
-    private func chipLabel(_ title: String, selected: Bool) -> some View {
+    private func chipLabel(_ title: String, selected: Bool, fill: Bool) -> some View {
         Text(title)
             .font(.subheadline.weight(.medium))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .foregroundStyle(selected ? settings.onAccent : .primary)
+            .padding(.vertical, 8)
+            .padding(.horizontal, fill ? 0 : 6)
+            .frame(maxWidth: fill ? .infinity : nil)
     }
 
     private var sortRow: some View {
@@ -437,3 +465,4 @@ struct LibraryView: View {
         }
     }
 }
+
