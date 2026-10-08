@@ -70,7 +70,7 @@ struct PlaylistDetailView: View {
             if canList {
                 ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                     Button {
-                        Task { await player.play(context: playlist.uri, offset: track.uri) }
+                        Task { await player.play(context: playlist.uri, offset: track.uri, showing: track) }
                     } label: {
                         TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                     }
@@ -138,7 +138,7 @@ struct AlbumDetailView: View {
 
             ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                 Button {
-                    Task { await player.play(context: album.uri, offset: track.uri) }
+                    Task { await player.play(context: album.uri, offset: track.uri, showing: track) }
                 } label: {
                     TrackRow(track: track, number: index + 1)
                 }
@@ -248,7 +248,7 @@ struct LikedSongsView: View {
 
             ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                 Button {
-                    Task { await player.play(uris: tracks.map(\.uri), startAt: index, key: Self.contextKey) }
+                    Task { await player.play(uris: tracks.map(\.uri), startAt: index, key: Self.contextKey, showing: track) }
                 } label: {
                     TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                 }

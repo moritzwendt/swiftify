@@ -31,7 +31,7 @@ struct SearchView: View {
                 Section("Songs") {
                     ForEach(tracks) { track in
                         Button {
-                            Task { await player.play(uris: [track.uri]) }
+                            Task { await player.play(uris: [track.uri], showing: track) }
                         } label: {
                             TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                         }

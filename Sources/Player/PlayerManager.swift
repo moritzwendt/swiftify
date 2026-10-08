@@ -33,6 +33,7 @@ final class PlayerManager {
     @ObservationIgnored private var sampleIndex = 0
     @ObservationIgnored private var pending: PendingPlayback?
     @ObservationIgnored private var holdsShuffle = false
+    @ObservationIgnored private var expected: (uri: String, until: Date)?
 
     init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
@@ -126,7 +127,7 @@ final class PlayerManager {
         do {
             let response = try await api.send("GET", "me/player")
             if response.status == 204 {
-                isPlaying = false
+                if !holdsExpectedTrack(nil) { isPlaying = false }
                 return
             }
             try response.validate()
@@ -136,22 +137,22 @@ final class PlayerManager {
         }
     }
 
-    func play(context: String, offset: String? = nil) async {
+    func play(context: String, offset: String? = nil, showing track: Track? = nil) async {
         var body: [String: Any] = ["context_uri": context]
         if let offset { body["offset"] = ["uri": offset] }
         localContextKey = nil
         contextURI = context
-        await startPlayback(body, pinsFirstTrack: offset != nil)
+        await startPlayback(body, pinsFirstTrack: offset != nil, showing: track)
     }
 
-    func play(uris: [String], startAt index: Int? = nil, key: String? = nil) async {
+    func play(uris: [String], startAt index: Int? = nil, key: String? = nil, showing track: Track? = nil) async {
         let start = index ?? 0
         guard start < uris.count else { return }
         let queue = Array(uris[start...].prefix(100))
         localContextKey = key
         localContextURIs = Set(queue)
         contextURI = nil
-        await startPlayback(["uris": queue], pinsFirstTrack: index != nil && queue.count > 1)
+        await startPlayback(["uris": queue], pinsFirstTrack: index != nil && queue.count > 1, showing: track)
     }
 
     func togglePlay() async {
@@ -232,6 +233,7 @@ final class PlayerManager {
     }
 
     private func apply(_ state: PlayerStateResponse) {
+        guard !holdsExpectedTrack(state.item?.uri) else { return }
         if let item = state.item, item.uri != track?.uri {
             track = item
             Task { await refreshLiked() }
@@ -272,15 +274,42 @@ final class PlayerManager {
         await refreshState(after: 0.4)
     }
 
-    private func startPlayback(_ body: [String: Any]?, pinsFirstTrack: Bool = false) async {
+    private func holdsExpectedTrack(_ uri: String?) -> Bool {
+        guard let expected else { return false }
+        if uri == expected.uri || Date() > expected.until {
+            self.expected = nil
+            return false
+        }
+        return true
+    }
+
+    private func show(_ next: Track) {
+        track = next
+        isPlaying = true
+        basePositionMs = 0
+        baseDate = Date()
+        expected = (next.uri, Date().addingTimeInterval(6))
+        Task { await refreshLiked() }
+    }
+
+    private func startPlayback(_ body: [String: Any]?, pinsFirstTrack: Bool = false, showing next: Track? = nil) async {
         errorMessage = nil
         pending = nil
+        let previous = (track: track, isPlaying: isPlaying, position: positionMs(at: Date()))
+        if let next { show(next) }
         do {
             try await sendPlay(body, deviceID: settings.preferredDeviceID, pinsFirstTrack: pinsFirstTrack)
         } catch let error as APIError where error.status == 404 {
             await playOnFirstDevice(body, pinsFirstTrack: pinsFirstTrack)
         } catch {
             errorMessage = error.localizedDescription
+        }
+        if errorMessage != nil, next != nil {
+            track = previous.track
+            isPlaying = previous.isPlaying
+            basePositionMs = previous.position
+            baseDate = Date()
+            expected = nil
         }
         await refreshState(after: 0.6)
     }
@@ -311,6 +340,8 @@ final class PlayerManager {
         do {
             guard let id = try await firstDeviceID() else {
                 pending = PendingPlayback(body: body, pinsFirstTrack: pinsFirstTrack, date: Date())
+                isPlaying = false
+                expected = nil
                 if await !openSpotify() {
                     pending = nil
                     errorMessage = Self.noDeviceMessage
