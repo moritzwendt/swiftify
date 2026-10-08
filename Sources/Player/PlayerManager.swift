@@ -5,7 +5,6 @@ import UIKit
 private struct PendingPlayback {
     let body: [String: Any]?
     let pinsFirstTrack: Bool
-    let forcesShuffle: Bool
     let date: Date
     var leftApp = false
 }
@@ -37,6 +36,8 @@ final class PlayerManager {
     @ObservationIgnored private var expected: (uri: String, until: Date)?
     @ObservationIgnored private var expectedPlaying: (value: Bool, until: Date)?
     @ObservationIgnored private var commandTask: Task<Void, Never>?
+    @ObservationIgnored private var expectedShuffle: (value: Bool, until: Date)?
+    @ObservationIgnored private var expectedRepeat: (value: String, until: Date)?
 
     init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
@@ -148,12 +149,6 @@ final class PlayerManager {
         await startPlayback(body, pinsFirstTrack: offset != nil, showing: track)
     }
 
-    func playShuffled(context: String) async {
-        localContextKey = nil
-        contextURI = context
-        await startPlayback(["context_uri": context], forcesShuffle: true)
-    }
-
     func play(uris: [String], startAt index: Int? = nil, key: String? = nil, showing track: Track? = nil) async {
         let start = index ?? 0
         guard start < uris.count else { return }
@@ -248,17 +243,66 @@ final class PlayerManager {
     }
 
     func toggleShuffle() async {
-        shuffle.toggle()
-        await command("PUT", "me/player/shuffle", query: ["state": shuffle ? "true" : "false"])
+        let target = !shuffle
+        let previous = shuffle
+        shuffle = target
+        expectedShuffle = (target, Date().addingTimeInterval(4))
+        await enqueue { [self] in
+            errorMessage = nil
+            await command("PUT", "me/player/shuffle", query: ["state": target ? "true" : "false"])
+            if errorMessage != nil {
+                shuffle = previous
+                expectedShuffle = nil
+            }
+        }
     }
 
     func cycleRepeat() async {
+        let previous = repeatMode
+        let target: String
         switch repeatMode {
-        case "off": repeatMode = "context"
-        case "context": repeatMode = "track"
-        default: repeatMode = "off"
+        case "off": target = "context"
+        case "context": target = "track"
+        default: target = "off"
         }
-        await command("PUT", "me/player/repeat", query: ["state": repeatMode])
+        repeatMode = target
+        expectedRepeat = (target, Date().addingTimeInterval(4))
+        await enqueue { [self] in
+            errorMessage = nil
+            await command("PUT", "me/player/repeat", query: ["state": target])
+            if errorMessage != nil {
+                repeatMode = previous
+                expectedRepeat = nil
+            }
+        }
+    }
+
+    private func enqueue(_ work: @escaping () async -> Void) async {
+        let previous = commandTask
+        let task = Task {
+            await previous?.value
+            await work()
+        }
+        commandTask = task
+        await task.value
+    }
+
+    private func holdsExpectedShuffle(_ value: Bool) -> Bool {
+        guard let expectedShuffle else { return false }
+        if value == expectedShuffle.value || Date() > expectedShuffle.until {
+            self.expectedShuffle = nil
+            return false
+        }
+        return true
+    }
+
+    private func holdsExpectedRepeat(_ value: String) -> Bool {
+        guard let expectedRepeat else { return false }
+        if value == expectedRepeat.value || Date() > expectedRepeat.until {
+            self.expectedRepeat = nil
+            return false
+        }
+        return true
     }
 
     func syncLiked(uri: String, liked: Bool) {
@@ -292,8 +336,10 @@ final class PlayerManager {
         }
         basePositionMs = Double(state.progressMs ?? 0)
         baseDate = Date()
-        if !holdsShuffle { shuffle = state.shuffleState ?? false }
-        repeatMode = state.repeatState ?? "off"
+        let incomingShuffle = state.shuffleState ?? false
+        if !holdsShuffle, !holdsExpectedShuffle(incomingShuffle) { shuffle = incomingShuffle }
+        let incomingRepeat = state.repeatState ?? "off"
+        if !holdsExpectedRepeat(incomingRepeat) { repeatMode = incomingRepeat }
         deviceName = state.device?.name
     }
 
@@ -338,7 +384,7 @@ final class PlayerManager {
         Task { await refreshLiked() }
     }
 
-    private func startPlayback(_ body: [String: Any]?, pinsFirstTrack: Bool = false, forcesShuffle: Bool = false, showing next: Track? = nil) async {
+    private func startPlayback(_ body: [String: Any]?, pinsFirstTrack: Bool = false, showing next: Track? = nil) async {
         errorMessage = nil
         pending = nil
         let previous = (track: track, isPlaying: isPlaying, position: positionMs(at: Date()))
@@ -348,9 +394,9 @@ final class PlayerManager {
             setPlayingLocally(true)
         }
         do {
-            try await sendPlay(body, deviceID: settings.preferredDeviceID, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle)
+            try await sendPlay(body, deviceID: settings.preferredDeviceID, pinsFirstTrack: pinsFirstTrack)
         } catch let error as APIError where error.status == 404 {
-            await playOnFirstDevice(body, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle)
+            await playOnFirstDevice(body, pinsFirstTrack: pinsFirstTrack)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -365,14 +411,13 @@ final class PlayerManager {
         await refreshState(after: 0.6)
     }
 
-    private func sendPlay(_ body: [String: Any]?, deviceID: String?, pinsFirstTrack: Bool, forcesShuffle: Bool = false) async throws {
+    private func sendPlay(_ body: [String: Any]?, deviceID: String?, pinsFirstTrack: Bool) async throws {
         var query: [String: String] = [:]
         if let deviceID { query["device_id"] = deviceID }
-        let reshuffle = pinsFirstTrack && shuffle && !forcesShuffle
-        if reshuffle || forcesShuffle {
+        let reshuffle = pinsFirstTrack && shuffle
+        if reshuffle {
             holdsShuffle = true
-            if forcesShuffle { shuffle = true }
-            try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": forcesShuffle ? "true" : "false"]) { $1 })
+            try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": "false"]) { $1 })
         }
         var failure: Error?
         do {
@@ -383,15 +428,15 @@ final class PlayerManager {
         if reshuffle {
             try? await Task.sleep(for: .milliseconds(500))
             try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": "true"]) { $1 })
+            holdsShuffle = false
         }
-        holdsShuffle = false
         if let failure { throw failure }
     }
 
-    private func playOnFirstDevice(_ body: [String: Any]?, pinsFirstTrack: Bool, forcesShuffle: Bool = false) async {
+    private func playOnFirstDevice(_ body: [String: Any]?, pinsFirstTrack: Bool) async {
         do {
             guard let id = try await firstDeviceID() else {
-                pending = PendingPlayback(body: body, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle, date: Date())
+                pending = PendingPlayback(body: body, pinsFirstTrack: pinsFirstTrack, date: Date())
                 isPlaying = false
                 expected = nil
                 expectedPlaying = nil
@@ -401,7 +446,7 @@ final class PlayerManager {
                 }
                 return
             }
-            try await sendPlay(body, deviceID: id, pinsFirstTrack: pinsFirstTrack, forcesShuffle: forcesShuffle)
+            try await sendPlay(body, deviceID: id, pinsFirstTrack: pinsFirstTrack)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -429,7 +474,7 @@ final class PlayerManager {
             if attempt > 0 { try? await Task.sleep(for: .seconds(1)) }
             do {
                 guard let id = try await firstDeviceID() else { continue }
-                try await sendPlay(request.body, deviceID: id, pinsFirstTrack: request.pinsFirstTrack, forcesShuffle: request.forcesShuffle)
+                try await sendPlay(request.body, deviceID: id, pinsFirstTrack: request.pinsFirstTrack)
                 await refreshState(after: 0.6)
                 return
             } catch {
