@@ -14,6 +14,9 @@ targets:
     platform: iOS
     sources:
       - Sources
+      - path: Icon/AppIcon.icon
+        type: file
+        buildPhase: resources
     postBuildScripts:
       - name: Generate Build Number
         script: '"$SRCROOT/Scripts/generate_build_number.sh"'
@@ -31,3 +34,4 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Swiftify
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

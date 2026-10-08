@@ -5,3 +5,4 @@ DerivedData/
 .swiftify_build_number.local
 .swiftify_build_number.lock/
 docs/
+xcuserdata/

@@ -23,6 +23,7 @@
 		83CAAD95905B1779C9ED5C7A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE95AE8EA99EB31F9CE2D06C /* RootView.swift */; };
 		861AFA475498D4655847FD54 /* SpotifyAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698ECAD27D0B06FC104878DC /* SpotifyAPI.swift */; };
 		90B67186AF43802180483DD9 /* SpotifyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70531C0CBEC205890DDF440A /* SpotifyConfig.swift */; };
+		94A635ABAB03BB5164980F98 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 8D1729CDB20D08B523B2272A /* AppIcon.icon */; };
 		9A1BB7F8F550CDD0A1D9B174 /* PlaybackTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A73919D7BA1AB3BD998AC6 /* PlaybackTestView.swift */; };
 		9AA1BF32A0D4314CC516E60E /* ChromeState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CBE2F2DF5C4EE0DC2DB1B2D /* ChromeState.swift */; };
 		A1D7DC7DA384A5A22516F889 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC856203CAD985E07B8FD41 /* LibraryView.swift */; };
@@ -54,6 +55,7 @@
 		70531C0CBEC205890DDF440A /* SpotifyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyConfig.swift; sourceTree = "<group>"; };
 		82BEDC5693E4D9400D8C7C04 /* LyricsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsClient.swift; sourceTree = "<group>"; };
 		859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueSheet.swift; sourceTree = "<group>"; };
+		8D1729CDB20D08B523B2272A /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		8D9E47EC0CC750B9A6F48F2C /* PlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerManager.swift; sourceTree = "<group>"; };
 		8EBBAD4CA1D80BCF47C42430 /* Swiftify.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Swiftify.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FE4B8428835DB9F4BD3001D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -102,6 +104,14 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		3D2CDF2EA4CE4626CF66148F /* Icon */ = {
+			isa = PBXGroup;
+			children = (
+				8D1729CDB20D08B523B2272A /* AppIcon.icon */,
+			);
+			path = Icon;
+			sourceTree = "<group>";
+		};
 		430CBD2BBB378A424C2E71D9 /* Player */ = {
 			isa = PBXGroup;
 			children = (
@@ -131,6 +141,7 @@
 		71281DD93A82B804039C1E1B = {
 			isa = PBXGroup;
 			children = (
+				3D2CDF2EA4CE4626CF66148F /* Icon */,
 				C03DF7D8AA1F2DB233741533 /* Sources */,
 				9F7C558FB7D7685AA03F29F0 /* Products */,
 			);
@@ -215,6 +226,7 @@
 			buildConfigurationList = B952AB3A61690EF0EBD22171 /* Build configuration list for PBXNativeTarget "Swiftify" */;
 			buildPhases = (
 				053251AC81BC3ED935DF0356 /* Sources */,
+				F17002908CC83EAC0E338F77 /* Resources */,
 				C35806083237FE4868E29DE5 /* Generate Build Number */,
 			);
 			buildRules = (
@@ -261,6 +273,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F17002908CC83EAC0E338F77 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				94A635ABAB03BB5164980F98 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		C35806083237FE4868E29DE5 /* Generate Build Number */ = {
