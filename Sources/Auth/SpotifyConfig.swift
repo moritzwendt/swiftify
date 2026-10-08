@@ -1,7 +1,7 @@
 import Foundation
 
 enum SpotifyConfig {
-    static let clientID = "YOUR_CLIENT_ID"
+    static let clientID = "193aa6e0ede54c4a8081cc4cf3354c88"
     static let redirectScheme = "swiftify"
     static let redirectURI = "swiftify://callback"
     static let authorizeURL = URL(string: "https://accounts.spotify.com/authorize")!
