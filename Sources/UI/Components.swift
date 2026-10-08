@@ -8,6 +8,7 @@ enum Route: Hashable {
     case album(Album)
     case artist(Artist)
     case likedSongs
+    case settings
 }
 
 func formatTime(_ ms: Double) -> String {
@@ -246,6 +247,7 @@ extension View {
             case .album(let album): AlbumDetailView(album: album)
             case .artist(let artist): ArtistDetailView(artist: artist)
             case .likedSongs: LikedSongsView()
+            case .settings: SettingsView()
             }
         }
     }

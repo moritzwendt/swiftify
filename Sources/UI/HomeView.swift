@@ -57,7 +57,7 @@ struct HomeView: View {
             }
             .navigationTitle(greeting)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { ProfileButton() }
+                ToolbarItem(placement: .topBarLeading) { ProfileButton() }
             }
             .appDestinations()
             .task(id: settings.topArtistsRange) { await loadShelves() }

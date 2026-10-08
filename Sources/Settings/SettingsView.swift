@@ -3,16 +3,13 @@ import SwiftUI
 struct ProfileButton: View {
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
-    @State private var showSettings = false
 
     private var initial: String {
         String((library.me?.displayName ?? "S").prefix(1)).uppercased()
     }
 
     var body: some View {
-        Button {
-            showSettings = true
-        } label: {
+        NavigationLink(value: Route.settings) {
             if let url = library.me?.images.url(atLeast: 64) {
                 ArtworkView(url: url, circle: true)
                     .frame(width: 32, height: 32)
@@ -25,7 +22,6 @@ struct ProfileButton: View {
             }
         }
         .accessibilityLabel("Settings")
-        .sheet(isPresented: $showSettings) { SettingsView() }
     }
 }
 
@@ -33,7 +29,6 @@ struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(AuthManager.self) private var auth
     @Environment(LibraryStore.self) private var library
-    @Environment(\.dismiss) private var dismiss
     @State private var devices: [SpotifyDevice] = []
     @State private var confirmClearMarks = false
     @State private var confirmClearPins = false
@@ -65,88 +60,78 @@ struct SettingsView: View {
 
     var body: some View {
         @Bindable var settings = settings
-        NavigationStack {
-            Form {
-                profileSection
-                appearanceSection
-                Section("Home") {
-                    Toggle("Recently played", isOn: $settings.homeShowRecent)
-                    Toggle("Your top artists", isOn: $settings.homeShowTopArtists)
-                    Picker("Top artists range", selection: $settings.topArtistsRange) {
-                        ForEach(TopArtistsRange.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Quick picks", selection: $settings.homeQuickCount) {
-                        ForEach([4, 6, 8], id: \.self) { Text("\($0)").tag($0) }
-                    }
+        Form {
+            profileSection
+            appearanceSection
+            Section("Home") {
+                Toggle("Recently played", isOn: $settings.homeShowRecent)
+                Toggle("Your top artists", isOn: $settings.homeShowTopArtists)
+                Picker("Top artists range", selection: $settings.topArtistsRange) {
+                    ForEach(TopArtistsRange.allCases) { Text($0.title).tag($0) }
                 }
-                Section("Library") {
-                    Picker("Sort", selection: sortBinding) {
-                        ForEach(LibrarySort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    Toggle("Show Liked Songs", isOn: $settings.showLikedSongsRow)
-                    Button("Clear download marks", role: .destructive) { confirmClearMarks = true }
-                    Button("Clear pins", role: .destructive) { confirmClearPins = true }
+                Picker("Quick picks", selection: $settings.homeQuickCount) {
+                    ForEach([4, 6, 8], id: \.self) { Text("\($0)").tag($0) }
                 }
-                Section("Playback") {
-                    Picker("Device", selection: deviceBinding) {
-                        Text("Automatic").tag(String?.none)
-                        if let id = settings.preferredDeviceID, !devices.contains(where: { $0.id == id }) {
-                            Text(settings.preferredDeviceName ?? "Saved device").tag(String?.some(id))
-                        }
-                        ForEach(devices) { device in
-                            if let id = device.id {
-                                Text(device.name).tag(String?.some(id))
-                            }
+            }
+            Section("Library") {
+                Picker("Sort", selection: sortBinding) {
+                    ForEach(LibrarySort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                Toggle("Show Liked Songs", isOn: $settings.showLikedSongsRow)
+                Button("Clear download marks", role: .destructive) { confirmClearMarks = true }
+                Button("Clear pins", role: .destructive) { confirmClearPins = true }
+            }
+            Section("Playback") {
+                Picker("Device", selection: deviceBinding) {
+                    Text("Automatic").tag(String?.none)
+                    if let id = settings.preferredDeviceID, !devices.contains(where: { $0.id == id }) {
+                        Text(settings.preferredDeviceName ?? "Saved device").tag(String?.some(id))
+                    }
+                    ForEach(devices) { device in
+                        if let id = device.id {
+                            Text(device.name).tag(String?.some(id))
                         }
                     }
-                    Picker("Previous button", selection: $settings.previousRestartSeconds) {
-                        Text("Previous song").tag(0)
-                        Text("Restart after 3 seconds").tag(3)
-                        Text("Restart after 5 seconds").tag(5)
-                        Text("Restart after 10 seconds").tag(10)
-                    }
-                    Toggle("Show explicit label", isOn: $settings.showExplicitBadge)
-                    Toggle("Haptics", isOn: $settings.haptics)
                 }
-                Section("Data") {
-                    Button("Clear image cache") { URLCache.shared.removeAllCachedResponses() }
-                    Button("Reset all settings", role: .destructive) { confirmReset = true }
+                Picker("Previous button", selection: $settings.previousRestartSeconds) {
+                    Text("Previous song").tag(0)
+                    Text("Restart after 3 seconds").tag(3)
+                    Text("Restart after 5 seconds").tag(5)
+                    Text("Restart after 10 seconds").tag(10)
                 }
-                Section("Account") {
-                    Button("Open Spotify") {
-                        if let url = URL(string: "spotify://") { UIApplication.shared.open(url) }
-                    }
-                    Button("Sign out", role: .destructive) {
-                        dismiss()
-                        auth.signOut()
-                    }
+                Toggle("Show explicit label", isOn: $settings.showExplicitBadge)
+                Toggle("Haptics", isOn: $settings.haptics)
+            }
+            Section("Data") {
+                Button("Clear image cache") { URLCache.shared.removeAllCachedResponses() }
+                Button("Reset all settings", role: .destructive) { confirmReset = true }
+            }
+            Section("Account") {
+                Button("Open Spotify") {
+                    if let url = URL(string: "spotify://") { UIApplication.shared.open(url) }
                 }
-                Section("Developer") {
-                    NavigationLink("Playback test") {
-                        PlaybackTestView(auth: auth)
-                    }
-                }
-                Section("About") {
-                    LabeledContent("Version", value: appVersion)
+                Button("Sign out", role: .destructive) { auth.signOut() }
+            }
+            Section("Developer") {
+                NavigationLink("Playback test") {
+                    PlaybackTestView(auth: auth)
                 }
             }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+            Section("About") {
+                LabeledContent("Version", value: appVersion)
             }
-            .task { await loadDevices() }
-            .confirmationDialog("Clear download marks", isPresented: $confirmClearMarks, titleVisibility: .visible) {
-                Button("Clear", role: .destructive) { library.clearDownloaded() }
             }
-            .confirmationDialog("Clear pins", isPresented: $confirmClearPins, titleVisibility: .visible) {
-                Button("Clear", role: .destructive) { library.clearPins() }
-            }
-            .confirmationDialog("Reset all settings", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Reset", role: .destructive) { settings.reset() }
-            }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await loadDevices() }
+        .confirmationDialog("Clear download marks", isPresented: $confirmClearMarks, titleVisibility: .visible) {
+            Button("Clear", role: .destructive) { library.clearDownloaded() }
+        }
+        .confirmationDialog("Clear pins", isPresented: $confirmClearPins, titleVisibility: .visible) {
+            Button("Clear", role: .destructive) { library.clearPins() }
+        }
+        .confirmationDialog("Reset all settings", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Reset", role: .destructive) { settings.reset() }
         }
     }
 

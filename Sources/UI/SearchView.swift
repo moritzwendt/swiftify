@@ -18,7 +18,7 @@ struct SearchView: View {
             .navigationTitle("Search")
             .searchable(text: $query, prompt: "What do you want to play?")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { ProfileButton() }
+                ToolbarItem(placement: .topBarLeading) { ProfileButton() }
             }
             .appDestinations()
             .task(id: query) { await search() }

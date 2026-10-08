@@ -183,7 +183,7 @@ struct LibraryView: View {
             .navigationTitle("Your Library")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { ProfileButton() }
+                ToolbarItem(placement: .topBarLeading) { ProfileButton() }
             }
             .appDestinations()
             .haptic(.success, trigger: library.pinned)
