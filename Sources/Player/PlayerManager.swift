@@ -34,6 +34,8 @@ final class PlayerManager {
     @ObservationIgnored private var pending: PendingPlayback?
     @ObservationIgnored private var holdsShuffle = false
     @ObservationIgnored private var expected: (uri: String, until: Date)?
+    @ObservationIgnored private var expectedPlaying: (value: Bool, until: Date)?
+    @ObservationIgnored private var commandTask: Task<Void, Never>?
 
     init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
@@ -127,7 +129,7 @@ final class PlayerManager {
         do {
             let response = try await api.send("GET", "me/player")
             if response.status == 204 {
-                if !holdsExpectedTrack(nil) { isPlaying = false }
+                if !holdsExpectedTrack(nil), !holdsExpectedPlaying(false) { isPlaying = false }
                 return
             }
             try response.validate()
@@ -160,15 +162,51 @@ final class PlayerManager {
             isPlaying.toggle()
             return
         }
-        if isPlaying {
-            basePositionMs = positionMs(at: Date())
-            isPlaying = false
-            await command("PUT", "me/player/pause")
-        } else {
-            baseDate = Date()
-            isPlaying = true
-            await startPlayback(nil)
+        let target = !isPlaying
+        setPlayingLocally(target)
+        let previous = commandTask
+        let task = Task { [weak self] in
+            await previous?.value
+            await self?.sendPlayState(target)
         }
+        commandTask = task
+        await task.value
+    }
+
+    private func setPlayingLocally(_ value: Bool) {
+        basePositionMs = positionMs(at: Date())
+        baseDate = Date()
+        isPlaying = value
+        expectedPlaying = (value, Date().addingTimeInterval(4))
+    }
+
+    private func sendPlayState(_ target: Bool) async {
+        if target {
+            await startPlayback(nil)
+        } else {
+            errorMessage = nil
+            do {
+                try await api.perform("PUT", "me/player/pause")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            await refreshState(after: 0.8)
+        }
+        if errorMessage != nil {
+            basePositionMs = positionMs(at: Date())
+            baseDate = Date()
+            isPlaying = !target
+            expectedPlaying = nil
+        }
+    }
+
+    private func holdsExpectedPlaying(_ value: Bool) -> Bool {
+        guard let expectedPlaying else { return false }
+        if value == expectedPlaying.value || Date() > expectedPlaying.until {
+            self.expectedPlaying = nil
+            return false
+        }
+        return true
     }
 
     func next() async {
@@ -233,7 +271,7 @@ final class PlayerManager {
     }
 
     private func apply(_ state: PlayerStateResponse) {
-        guard !holdsExpectedTrack(state.item?.uri) else { return }
+        guard !holdsExpectedTrack(state.item?.uri), !holdsExpectedPlaying(state.isPlaying) else { return }
         if let item = state.item, item.uri != track?.uri {
             track = item
             Task { await refreshLiked() }
@@ -289,6 +327,7 @@ final class PlayerManager {
         basePositionMs = 0
         baseDate = Date()
         expected = (next.uri, Date().addingTimeInterval(6))
+        expectedPlaying = nil
         Task { await refreshLiked() }
     }
 
@@ -296,7 +335,11 @@ final class PlayerManager {
         errorMessage = nil
         pending = nil
         let previous = (track: track, isPlaying: isPlaying, position: positionMs(at: Date()))
-        if let next { show(next) }
+        if let next {
+            show(next)
+        } else if !isPlaying {
+            setPlayingLocally(true)
+        }
         do {
             try await sendPlay(body, deviceID: settings.preferredDeviceID, pinsFirstTrack: pinsFirstTrack)
         } catch let error as APIError where error.status == 404 {
@@ -304,12 +347,13 @@ final class PlayerManager {
         } catch {
             errorMessage = error.localizedDescription
         }
-        if errorMessage != nil, next != nil {
+        if errorMessage != nil {
             track = previous.track
             isPlaying = previous.isPlaying
             basePositionMs = previous.position
             baseDate = Date()
             expected = nil
+            expectedPlaying = nil
         }
         await refreshState(after: 0.6)
     }
@@ -342,6 +386,7 @@ final class PlayerManager {
                 pending = PendingPlayback(body: body, pinsFirstTrack: pinsFirstTrack, date: Date())
                 isPlaying = false
                 expected = nil
+                expectedPlaying = nil
                 if await !openSpotify() {
                     pending = nil
                     errorMessage = Self.noDeviceMessage
