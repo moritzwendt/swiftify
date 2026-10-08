@@ -1,5 +1,12 @@
 import Foundation
 
+struct APIError: LocalizedError {
+    let status: Int
+    let message: String
+
+    var errorDescription: String? { message.isEmpty ? "HTTP \(status)" : message }
+}
+
 struct APIResponse {
     let status: Int
     let data: Data
@@ -11,6 +18,15 @@ struct APIResponse {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(type, from: data)
+    }
+
+    func validate() throws {
+        guard isSuccess else {
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let error = object?["error"] as? [String: Any]
+            let message = (error?["message"] as? String) ?? ""
+            throw APIError(status: status, message: message)
+        }
     }
 }
 
@@ -38,35 +54,26 @@ struct SpotifyAPI {
         let (data, response) = try await URLSession.shared.data(for: request)
         return APIResponse(status: (response as? HTTPURLResponse)?.statusCode ?? 0, data: data)
     }
-}
 
-struct SpotifyDevice: Decodable, Identifiable {
-    let id: String?
-    let name: String
-    let type: String
-    let isActive: Bool
-}
-
-struct DevicesResponse: Decodable {
-    let devices: [SpotifyDevice]
-}
-
-struct PlaylistsResponse: Decodable {
-    struct Item: Decodable {
-        let id: String
-        let name: String
-        let uri: String
+    func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {
+        let response = try await send("GET", path, query: query)
+        try response.validate()
+        return try response.decode(T.self)
     }
-    let items: [Item]
-}
 
-struct PlayerState: Decodable {
-    struct Track: Decodable {
-        struct Artist: Decodable { let name: String }
-        let name: String
-        let artists: [Artist]
+    func perform(
+        _ method: String,
+        _ path: String,
+        query: [String: String] = [:],
+        body: [String: Any]? = nil
+    ) async throws {
+        let response = try await send(method, path, query: query, body: body)
+        try response.validate()
     }
-    let isPlaying: Bool
-    let item: Track?
-    let device: SpotifyDevice?
+
+    func post<T: Decodable>(_ path: String, body: [String: Any]) async throws -> T {
+        let response = try await send("POST", path, body: body)
+        try response.validate()
+        return try response.decode(T.self)
+    }
 }

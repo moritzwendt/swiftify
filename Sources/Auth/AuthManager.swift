@@ -40,7 +40,11 @@ final class AuthManager {
     @ObservationIgnored private let presenter = PresentationAnchorProvider()
 
     init() {
-        let saved = store.load()
+        var saved = store.load()
+        if let current = saved, current.scope != SpotifyConfig.scopeString {
+            store.clear()
+            saved = nil
+        }
         tokens = saved
         isAuthenticated = saved != nil
     }
@@ -88,7 +92,8 @@ final class AuthManager {
             persist(StoredTokens(
                 accessToken: response.accessToken,
                 refreshToken: refreshToken,
-                expiresAt: Date().addingTimeInterval(TimeInterval(response.expiresIn))
+                expiresAt: Date().addingTimeInterval(TimeInterval(response.expiresIn)),
+                scope: SpotifyConfig.scopeString
             ))
         } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
             return
@@ -135,7 +140,8 @@ final class AuthManager {
         return StoredTokens(
             accessToken: response.accessToken,
             refreshToken: response.refreshToken ?? current.refreshToken,
-            expiresAt: Date().addingTimeInterval(TimeInterval(response.expiresIn))
+            expiresAt: Date().addingTimeInterval(TimeInterval(response.expiresIn)),
+            scope: current.scope
         )
     }
 

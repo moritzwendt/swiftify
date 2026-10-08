@@ -20,6 +20,9 @@ enum SpotifyConfig {
         "user-read-currently-playing",
         "user-read-recently-played",
         "user-top-read",
+        "user-follow-read",
         "app-remote-control"
     ]
+
+    static var scopeString: String { scopes.joined(separator: " ") }
 }

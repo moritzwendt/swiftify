@@ -25,8 +25,8 @@ final class PlaybackTester {
             let response = try await api.send("GET", "me/player")
             if response.status == 204 { return "Nothing active" }
             guard response.isSuccess else { return "HTTP \(response.status) \(response.text)" }
-            let state = try response.decode(PlayerState.self)
-            let track = state.item.map { "\($0.name) by \($0.artists.map(\.name).joined(separator: ", "))" } ?? "No track"
+            let state = try response.decode(PlayerStateResponse.self)
+            let track = state.item.map { "\($0.name) by \($0.artistLine)" } ?? "No track"
             return "\(state.isPlaying ? "Playing" : "Paused"): \(track) on \(state.device?.name ?? "unknown")"
         }
     }
