@@ -2,3 +2,5 @@
 build/
 DerivedData/
 .DS_Store
+.swiftify_build_number.local
+.swiftify_build_number.lock/
