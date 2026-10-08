@@ -5,12 +5,23 @@ struct RootView: View {
     @State private var result: String?
 
     var body: some View {
+        NavigationStack {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 20) {
             if auth.isAuthenticated {
+                NavigationLink("Playback test") {
+                    PlaybackTestView(auth: auth)
+                }
+                .buttonStyle(.borderedProminent)
+
                 Button("Test GET /me/playlists") {
                     Task { result = await testPlaylists() }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
 
                 if let result {
                     ScrollView {
