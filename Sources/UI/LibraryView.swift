@@ -34,7 +34,6 @@ struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
     @Environment(PlayerManager.self) private var player
-    @Namespace private var chipSpace
     @State private var filter: LibraryFilter?
     @State private var sub: LibrarySubFilter?
 
@@ -123,7 +122,7 @@ struct LibraryView: View {
     var body: some View {
         NavigationStack {
             List {
-                if settings.showLikedSongsRow && sub == nil && (filter == nil || filter == .playlists) {
+                if settings.showLikedSongsRow && (sub == nil || sub == .byYou) && (filter == nil || filter == .playlists) {
                     NavigationLink(value: Route.likedSongs) {
                         MediaRow(
                             imageURL: nil,
@@ -133,6 +132,7 @@ struct LibraryView: View {
                         )
                     }
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .navigationLinkIndicatorVisibility(.hidden)
                 }
 
@@ -148,6 +148,7 @@ struct LibraryView: View {
                         )
                     }
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .navigationLinkIndicatorVisibility(.hidden)
                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
                         Button {
@@ -221,35 +222,31 @@ struct LibraryView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
-                    if filter != nil {
+                    if let selected = filter {
                         Button {
-                            select(nil)
+                            withAnimation(.snappy) { select(nil) }
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: 20, height: 20)
-                                .padding(9)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 6)
                         }
-                        .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive(), in: .circle)
-                        .glassEffectID("clear", in: chipSpace)
+                        .buttonStyle(.glass)
                         .accessibilityLabel("Clear filter")
-                    }
-                    if let filter {
-                        chip(filter.rawValue, id: filter.rawValue, selected: true) {}
-                        ForEach(subFilters(for: filter), id: \.rawValue) { value in
-                            chip(value.rawValue, id: "sub-\(value.rawValue)", selected: sub == value) {
-                                withAnimation(.bouncy) { sub = sub == value ? nil : value }
+                        chip(selected.rawValue, selected: true) {}
+                        ForEach(subFilters(for: selected), id: \.rawValue) { value in
+                            chip(value.rawValue, selected: sub == value) {
+                                withAnimation(.snappy) { sub = sub == value ? nil : value }
                             }
                         }
                     } else {
                         ForEach(LibraryFilter.allCases, id: \.self) { value in
-                            chip(value.rawValue, id: value.rawValue, selected: false) { select(value) }
+                            chip(value.rawValue, selected: false) {
+                                withAnimation(.snappy) { select(value) }
+                            }
                         }
                     }
                 }
-                .padding(.vertical, 4)
             }
         }
         .scrollClipDisabled()
@@ -265,26 +262,32 @@ struct LibraryView: View {
     }
 
     private func select(_ value: LibraryFilter?) {
-        withAnimation(.bouncy) {
-            filter = value
-            sub = nil
+        filter = value
+        sub = nil
+    }
+
+    @ViewBuilder
+    private func chip(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        if selected {
+            Button(action: action) {
+                chipLabel(title, selected: true)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(settings.accent)
+        } else {
+            Button(action: action) {
+                chipLabel(title, selected: false)
+            }
+            .buttonStyle(.glass)
         }
     }
 
-    private func chip(_ title: String, id: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(selected ? settings.onAccent : .primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-        }
-        .buttonStyle(.plain)
-        .glassEffect(
-            selected ? .regular.tint(settings.accent).interactive() : .regular.interactive(),
-            in: .capsule
-        )
-        .glassEffectID(id, in: chipSpace)
+    private func chipLabel(_ title: String, selected: Bool) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(selected ? settings.onAccent : .primary)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 6)
     }
 
     private var sortRow: some View {
