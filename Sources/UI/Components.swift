@@ -26,21 +26,29 @@ struct ArtworkView: View {
         Color.clear
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        Rectangle()
-                            .fill(.quaternary)
-                            .overlay {
-                                Image(systemName: circle ? "person.fill" : "music.note")
-                                    .foregroundStyle(.secondary)
-                            }
+                if settings.cacheImages {
+                    CachedImage(url: url) { placeholder }
+                } else {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            placeholder
+                        }
                     }
                 }
             }
             .clipShape(circle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: settings.squareArtwork ? 0 : cornerRadius, style: .continuous)))
+    }
+
+    private var placeholder: some View {
+        Rectangle()
+            .fill(.quaternary)
+            .overlay {
+                Image(systemName: circle ? "person.fill" : "music.note")
+                    .foregroundStyle(.secondary)
+            }
     }
 }
 

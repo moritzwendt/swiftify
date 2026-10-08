@@ -47,6 +47,8 @@ struct SwiftifyApp: App {
                         player.reset()
                         queue.reset()
                         lyrics.reset()
+                        TrackListCache.clear()
+                        Task { await ImageCache.shared.clear() }
                     }
                 }
         }

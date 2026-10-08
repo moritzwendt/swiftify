@@ -153,6 +153,14 @@ final class AppSettings {
         didSet { Self.defaults.set(previousRestartSeconds, forKey: "settings.previousRestartSeconds") }
     }
 
+    var cacheLists: Bool {
+        didSet { Self.defaults.set(cacheLists, forKey: "settings.cacheLists") }
+    }
+
+    var cacheImages: Bool {
+        didSet { Self.defaults.set(cacheImages, forKey: "settings.cacheImages") }
+    }
+
     var preferredDeviceID: String? {
         didSet { Self.defaults.set(preferredDeviceID, forKey: "settings.preferredDeviceID") }
     }
@@ -178,6 +186,8 @@ final class AppSettings {
         libraryGrid = defaults.object(forKey: "settings.libraryGrid") as? Bool ?? false
         showLikedSongsRow = defaults.object(forKey: "settings.showLikedSongsRow") as? Bool ?? true
         previousRestartSeconds = defaults.object(forKey: "settings.previousRestartSeconds") as? Int ?? 3
+        cacheLists = defaults.object(forKey: "settings.cacheLists") as? Bool ?? true
+        cacheImages = defaults.object(forKey: "settings.cacheImages") as? Bool ?? true
         preferredDeviceID = defaults.string(forKey: "settings.preferredDeviceID")
         preferredDeviceName = defaults.string(forKey: "settings.preferredDeviceName")
     }
@@ -202,6 +212,8 @@ final class AppSettings {
         libraryGrid = false
         showLikedSongsRow = true
         previousRestartSeconds = 3
+        cacheLists = true
+        cacheImages = true
         preferredDeviceID = nil
         preferredDeviceName = nil
     }

@@ -42,10 +42,9 @@ struct PlaylistDetailView: View {
     let playlist: Playlist
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
+    @Environment(AppSettings.self) private var settings
     @State private var tracks: [Track] = []
-    @State private var offset = 0
-    @State private var total = 0
-    @State private var isLoading = false
+    @State private var isComplete = false
 
     private var canList: Bool { library.canListTracks(of: playlist) }
 
@@ -77,9 +76,6 @@ struct PlaylistDetailView: View {
                     .buttonStyle(.plain)
                     .trackActions(track)
                     .detailRow()
-                    .onAppear {
-                        if index == tracks.count - 5 { Task { await loadMore() } }
-                    }
                 }
             } else {
                 Text("The track list is not available for playlists you do not own")
@@ -92,25 +88,41 @@ struct PlaylistDetailView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadMore() }
+        .task { await load() }
     }
 
-    private func loadMore() async {
+    private func load() async {
         if library.isSample {
             tracks = SampleData.tracks
             return
         }
-        guard canList, !isLoading, (offset == 0 || offset < total) else { return }
-        isLoading = true
-        defer { isLoading = false }
-        let page: Page<PlaylistItem>? = try? await library.api.get(
-            "playlists/\(playlist.id)/items",
-            query: ["limit": "50", "offset": "\(offset)"]
-        )
-        guard let page else { return }
-        total = page.total ?? 0
-        offset += 50
-        tracks += page.items.compactMap(\.resolved)
+        guard canList, !isComplete else { return }
+        let path = "playlists/\(playlist.id)/items"
+        if settings.cacheLists, let snapshot = playlist.snapshotId,
+           let cached = await TrackListCache.load(key: playlist.id), cached.stamp == snapshot {
+            tracks = cached.tracks
+            isComplete = true
+            await prefetchImages()
+            return
+        }
+        tracks = []
+        let first: Page<PlaylistItem>? = try? await library.api.get(path, query: ["limit": "50", "offset": "0"])
+        guard let first else { return }
+        tracks = first.items.compactMap(\.resolved)
+        let finished = await PagedLoader.loadRemaining(api: library.api, path: path, first: first) {
+            tracks += $0.compactMap(\.resolved)
+        }
+        guard finished else { return }
+        isComplete = true
+        if settings.cacheLists, let snapshot = playlist.snapshotId {
+            await TrackListCache.save(key: playlist.id, stamp: snapshot, tracks: tracks)
+        }
+        await prefetchImages()
+    }
+
+    private func prefetchImages() async {
+        guard settings.cacheImages else { return }
+        await ImageCache.shared.prefetchArtwork(of: tracks)
     }
 }
 
@@ -228,10 +240,9 @@ struct LikedSongsView: View {
 
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
+    @Environment(AppSettings.self) private var settings
     @State private var tracks: [Track] = []
-    @State private var offset = 0
-    @State private var total = 0
-    @State private var isLoading = false
+    @State private var isComplete = false
 
     var body: some View {
         List {
@@ -255,32 +266,47 @@ struct LikedSongsView: View {
                 .buttonStyle(.plain)
                 .trackActions(track)
                 .detailRow()
-                .onAppear {
-                    if index == tracks.count - 5 { Task { await loadMore() } }
-                }
             }
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadMore() }
+        .task { await load() }
     }
 
-    private func loadMore() async {
+    private func load() async {
         if library.isSample {
             tracks = SampleData.tracks
             return
         }
-        guard !isLoading, (offset == 0 || offset < total) else { return }
-        isLoading = true
-        defer { isLoading = false }
-        let page: Page<SavedTrack>? = try? await library.api.get(
-            "me/tracks",
-            query: ["limit": "50", "offset": "\(offset)"]
-        )
-        guard let page else { return }
-        total = page.total ?? 0
-        offset += 50
-        tracks += page.items.map(\.track)
+        guard !isComplete else { return }
+        let path = "me/tracks"
+        let cached = settings.cacheLists ? await TrackListCache.load(key: Self.contextKey) : nil
+        if let cached, tracks.isEmpty { tracks = cached.tracks }
+        let first: Page<SavedTrack>? = try? await library.api.get(path, query: ["limit": "50", "offset": "0"])
+        guard let first else { return }
+        let firstTracks = first.items.map(\.track)
+        let stamp = "\(first.total ?? 0)|\(firstTracks.first?.uri ?? "")"
+        if let cached, cached.stamp == stamp {
+            tracks = cached.tracks
+            isComplete = true
+            await prefetchImages()
+            return
+        }
+        tracks = firstTracks
+        let finished = await PagedLoader.loadRemaining(api: library.api, path: path, first: first) {
+            tracks += $0.map(\.track)
+        }
+        guard finished else { return }
+        isComplete = true
+        if settings.cacheLists {
+            await TrackListCache.save(key: Self.contextKey, stamp: stamp, tracks: tracks)
+        }
+        await prefetchImages()
+    }
+
+    private func prefetchImages() async {
+        guard settings.cacheImages else { return }
+        await ImageCache.shared.prefetchArtwork(of: tracks)
     }
 }

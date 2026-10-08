@@ -316,9 +316,18 @@ struct StorageSettings: View {
     @State private var confirmReset = false
 
     var body: some View {
-        Form {
+        @Bindable var settings = settings
+        return Form {
             Section {
-                Button("Clear image cache") { URLCache.shared.removeAllCachedResponses() }
+                Toggle("Cache song lists", isOn: $settings.cacheLists)
+                Toggle("Cache images", isOn: $settings.cacheImages)
+            }
+            Section {
+                Button("Clear song list cache") { TrackListCache.clear() }
+                Button("Clear image cache") {
+                    URLCache.shared.removeAllCachedResponses()
+                    Task { await ImageCache.shared.clear() }
+                }
                 Button("Clear download marks", role: .destructive) { confirmClearMarks = true }
                 Button("Clear pins", role: .destructive) { confirmClearPins = true }
             }

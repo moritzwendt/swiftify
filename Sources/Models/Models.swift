@@ -1,6 +1,6 @@
 import Foundation
 
-struct SpotifyImage: Decodable, Hashable {
+struct SpotifyImage: Codable, Hashable {
     let url: String
     let width: Int?
 }
@@ -47,7 +47,7 @@ struct Page<T: Decodable>: Decodable {
     }
 }
 
-struct ArtistRef: Decodable, Hashable {
+struct ArtistRef: Codable, Hashable {
     let id: String?
     let name: String
     let uri: String?
@@ -64,6 +64,10 @@ struct Artist: Decodable, Hashable, Identifiable {
 }
 
 struct Album: Decodable, Hashable, Identifiable {
+    private enum CodingKeys: String, CodingKey {
+        case id, uri, name, images, artists, releaseDate, totalTracks, albumType, tracks
+    }
+
     let id: String
     let uri: String
     let name: String
@@ -81,7 +85,21 @@ struct Album: Decodable, Hashable, Identifiable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
-struct Track: Decodable, Hashable, Identifiable {
+extension Album: Encodable {
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(uri, forKey: .uri)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(images, forKey: .images)
+        try container.encodeIfPresent(artists, forKey: .artists)
+        try container.encodeIfPresent(releaseDate, forKey: .releaseDate)
+        try container.encodeIfPresent(totalTracks, forKey: .totalTracks)
+        try container.encodeIfPresent(albumType, forKey: .albumType)
+    }
+}
+
+struct Track: Codable, Hashable, Identifiable {
     let id: String?
     let uri: String
     let name: String
