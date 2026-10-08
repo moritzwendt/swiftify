@@ -4,6 +4,7 @@ import UIKit
 
 private struct PendingPlayback {
     let body: [String: Any]?
+    let pinsFirstTrack: Bool
     let date: Date
     var leftApp = false
 }
@@ -31,6 +32,7 @@ final class PlayerManager {
     @ObservationIgnored private var sampleQueue: [Track] = []
     @ObservationIgnored private var sampleIndex = 0
     @ObservationIgnored private var pending: PendingPlayback?
+    @ObservationIgnored private var holdsShuffle = false
 
     init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
@@ -139,16 +141,17 @@ final class PlayerManager {
         if let offset { body["offset"] = ["uri": offset] }
         localContextKey = nil
         contextURI = context
-        await startPlayback(body)
+        await startPlayback(body, pinsFirstTrack: offset != nil)
     }
 
-    func play(uris: [String], startAt index: Int = 0, key: String? = nil) async {
-        guard index < uris.count else { return }
-        let queue = Array(uris[index...].prefix(100))
+    func play(uris: [String], startAt index: Int? = nil, key: String? = nil) async {
+        let start = index ?? 0
+        guard start < uris.count else { return }
+        let queue = Array(uris[start...].prefix(100))
         localContextKey = key
         localContextURIs = Set(queue)
         contextURI = nil
-        await startPlayback(["uris": queue])
+        await startPlayback(["uris": queue], pinsFirstTrack: index != nil && queue.count > 1)
     }
 
     func togglePlay() async {
@@ -242,7 +245,7 @@ final class PlayerManager {
         }
         basePositionMs = Double(state.progressMs ?? 0)
         baseDate = Date()
-        shuffle = state.shuffleState ?? false
+        if !holdsShuffle { shuffle = state.shuffleState ?? false }
         repeatMode = state.repeatState ?? "off"
         deviceName = state.device?.name
     }
@@ -269,32 +272,52 @@ final class PlayerManager {
         await refreshState(after: 0.4)
     }
 
-    private func startPlayback(_ body: [String: Any]?) async {
+    private func startPlayback(_ body: [String: Any]?, pinsFirstTrack: Bool = false) async {
         errorMessage = nil
         pending = nil
-        var query: [String: String] = [:]
-        if let device = settings.preferredDeviceID { query["device_id"] = device }
         do {
-            try await api.perform("PUT", "me/player/play", query: query, body: body)
+            try await sendPlay(body, deviceID: settings.preferredDeviceID, pinsFirstTrack: pinsFirstTrack)
         } catch let error as APIError where error.status == 404 {
-            await playOnFirstDevice(body)
+            await playOnFirstDevice(body, pinsFirstTrack: pinsFirstTrack)
         } catch {
             errorMessage = error.localizedDescription
         }
         await refreshState(after: 0.6)
     }
 
-    private func playOnFirstDevice(_ body: [String: Any]?) async {
+    private func sendPlay(_ body: [String: Any]?, deviceID: String?, pinsFirstTrack: Bool) async throws {
+        var query: [String: String] = [:]
+        if let deviceID { query["device_id"] = deviceID }
+        let reshuffle = pinsFirstTrack && shuffle
+        if reshuffle {
+            holdsShuffle = true
+            try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": "false"]) { $1 })
+        }
+        var failure: Error?
+        do {
+            try await api.perform("PUT", "me/player/play", query: query, body: body)
+        } catch {
+            failure = error
+        }
+        if reshuffle {
+            try? await Task.sleep(for: .milliseconds(500))
+            try? await api.perform("PUT", "me/player/shuffle", query: query.merging(["state": "true"]) { $1 })
+            holdsShuffle = false
+        }
+        if let failure { throw failure }
+    }
+
+    private func playOnFirstDevice(_ body: [String: Any]?, pinsFirstTrack: Bool) async {
         do {
             guard let id = try await firstDeviceID() else {
-                pending = PendingPlayback(body: body, date: Date())
+                pending = PendingPlayback(body: body, pinsFirstTrack: pinsFirstTrack, date: Date())
                 if await !openSpotify() {
                     pending = nil
                     errorMessage = Self.noDeviceMessage
                 }
                 return
             }
-            try await api.perform("PUT", "me/player/play", query: ["device_id": id], body: body)
+            try await sendPlay(body, deviceID: id, pinsFirstTrack: pinsFirstTrack)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -322,7 +345,7 @@ final class PlayerManager {
             if attempt > 0 { try? await Task.sleep(for: .seconds(1)) }
             do {
                 guard let id = try await firstDeviceID() else { continue }
-                try await api.perform("PUT", "me/player/play", query: ["device_id": id], body: request.body)
+                try await sendPlay(request.body, deviceID: id, pinsFirstTrack: request.pinsFirstTrack)
                 await refreshState(after: 0.6)
                 return
             } catch {
