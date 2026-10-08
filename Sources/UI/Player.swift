@@ -131,6 +131,8 @@ struct FullPlayerView: View {
     @State private var tint: Color = .gray
     @State private var showSave = false
     @State private var showQueue = false
+    @State private var showLyrics = false
+    @State private var lyricsFrame = CGRect.zero
     @State private var savedWhenOpened = false
 
     private var isSaved: Bool {
@@ -154,10 +156,23 @@ struct FullPlayerView: View {
                         .frame(width: 40, height: 5)
                         .padding(.top, 8)
 
-                    ArtworkView(url: player.artworkURL(atLeast: 640), cornerRadius: 16)
-                        .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
-                        .scaleEffect(player.isPlaying ? 1 : 0.86)
-                        .animation(.spring(duration: 0.5, bounce: 0.3), value: player.isPlaying)
+                    Group {
+                        if showLyrics {
+                            LyricsView()
+                                .frame(maxHeight: .infinity)
+                                .onGeometryChange(for: CGRect.self) { proxy in
+                                    proxy.frame(in: .named("player"))
+                                } action: { frame in
+                                    lyricsFrame = frame
+                                }
+                        } else {
+                            ArtworkView(url: player.artworkURL(atLeast: 640), cornerRadius: 16)
+                                .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
+                                .scaleEffect(player.isPlaying ? 1 : 0.86)
+                                .animation(.spring(duration: 0.5, bounce: 0.3), value: player.isPlaying)
+                        }
+                    }
+                    .transition(.opacity)
                 }
 
                 Spacer(minLength: 16)
@@ -225,6 +240,9 @@ struct FullPlayerView: View {
                             .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(1)
                         Spacer(minLength: 0)
+                        transportButton(showLyrics ? "quote.bubble.fill" : "quote.bubble", active: showLyrics, label: "Lyrics") {
+                            withAnimation(.easeInOut(duration: 0.25)) { showLyrics.toggle() }
+                        }
                         transportButton("list.bullet", label: "Queue") {
                             showQueue = true
                         }
@@ -236,10 +254,12 @@ struct FullPlayerView: View {
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
+        .coordinateSpace(name: "player")
         .contentShape(Rectangle())
         .simultaneousGesture(
             DragGesture(minimumDistance: 24)
                 .onEnded { value in
+                    if showLyrics, lyricsFrame.contains(value.startLocation) { return }
                     let vertical = value.translation.height
                     if vertical > 90, abs(value.translation.width) < vertical * 0.5 {
                         dismiss()
@@ -255,6 +275,7 @@ struct FullPlayerView: View {
             QueueSheet()
         }
         .haptic(.impact, trigger: player.isPlaying)
+        .haptic(.selection, trigger: showLyrics)
         .haptic(.selection, trigger: player.shuffle)
         .haptic(.selection, trigger: player.repeatMode)
         .haptic(.success, trigger: player.isLiked)

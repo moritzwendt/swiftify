@@ -8,7 +8,7 @@ enum SampleData {
         return try! decoder.decode(T.self, from: Data(json.utf8))
     }
 
-    static func install(library: LibraryStore, player: PlayerManager, queue: QueueStore) {
+    static func install(library: LibraryStore, player: PlayerManager, queue: QueueStore, lyrics: LyricsStore) {
         let me: Me = decode(#"{"id":"me","display_name":"Moritz"}"#)
         let names = ["Daily Mix 1", "Late Night Drive", "Gym Energy", "Focus Flow", "Road Trip", "Sunday Jazz", "Indie Gems"]
         let playlists: [Playlist] = names.enumerated().map { index, name in
@@ -25,6 +25,7 @@ enum SampleData {
         library.membership.loadSample(["p1": ["spotify:track:t1"]])
         player.loadSample(queue: Array(tracks.prefix(3)), positionMs: 64000, context: "spotify:playlist:p0")
         queue.loadSample(upcoming: Array(tracks.dropFirst(3).prefix(8)))
+        lyrics.isSample = true
     }
 
     static let tracks: [Track] = [

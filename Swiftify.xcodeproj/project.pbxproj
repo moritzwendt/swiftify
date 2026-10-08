@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		04E6AEFF7A2A0DE9E9E6BBB8 /* LyricsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7B74EE95DE8203EF529A9CC /* LyricsStore.swift */; };
 		0FA3F4518C02BF445C3D88EA /* QueueSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */; };
 		11B7039050FC8BFA776CB9D2 /* MembershipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B875DCE444C5608C150FB1 /* MembershipStore.swift */; };
 		11CD632230B7400670CEFFC8 /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055BBB40A64B448CFC70A1FF /* SampleData.swift */; };
 		1F02C94439C49CE1798E4713 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47E07B50B8AB7364BD96D94 /* SettingsView.swift */; };
+		20DC5D18BC0C435070D71B24 /* Lyrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D5DB397DA92DA5F03AFE50 /* Lyrics.swift */; };
 		31AB5FD3EEA24DD2A06F75B8 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F798C91C8348DB06C3AFE5 /* HomeView.swift */; };
 		343987956BAB9D90269A3A05 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F921DF436A201E5E30C2527 /* LibraryStore.swift */; };
 		417AA39FE41CDB0726295828 /* SaveToSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */; };
@@ -29,7 +31,9 @@
 		AA3D0E0945D07788FFAB1E5D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448568EAAECAFD202065608F /* AppSettings.swift */; };
 		B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AB62131834C889BBB1EB2 /* AuthManager.swift */; };
 		D43019C252028289DC589E1D /* CreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63152471936FB65D84D134F /* CreateSheet.swift */; };
+		D741C27E8280915C8714DEF9 /* LyricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */; };
 		DB5A83FE33457199874C0294 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9253737EC9EB49D97054D3CF /* Player.swift */; };
+		DFB53B4B8AD6EAFBBBA6B94B /* LyricsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82BEDC5693E4D9400D8C7C04 /* LyricsClient.swift */; };
 		E4784CE70D390825F6EB3191 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C187B116A8622056CC4AA47E /* TokenStore.swift */; };
 		E7DF497C9E42390C4E4987E9 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE4B8428835DB9F4BD3001D /* Models.swift */; };
 		F38BDB36147DC11AA93DB29C /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0AAB1F34BACA7B0F3F5353 /* DetailViews.swift */; };
@@ -42,11 +46,13 @@
 		36B875DCE444C5608C150FB1 /* MembershipStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MembershipStore.swift; sourceTree = "<group>"; };
 		448568EAAECAFD202065608F /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftifyApp.swift; sourceTree = "<group>"; };
+		54D5DB397DA92DA5F03AFE50 /* Lyrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lyrics.swift; sourceTree = "<group>"; };
 		5A2845162E089807930C2FF0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		5B7532A71F786053F98E0BFE /* QueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueStore.swift; sourceTree = "<group>"; };
 		60A73919D7BA1AB3BD998AC6 /* PlaybackTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackTestView.swift; sourceTree = "<group>"; };
 		698ECAD27D0B06FC104878DC /* SpotifyAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyAPI.swift; sourceTree = "<group>"; };
 		70531C0CBEC205890DDF440A /* SpotifyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyConfig.swift; sourceTree = "<group>"; };
+		82BEDC5693E4D9400D8C7C04 /* LyricsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsClient.swift; sourceTree = "<group>"; };
 		859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueSheet.swift; sourceTree = "<group>"; };
 		8D9E47EC0CC750B9A6F48F2C /* PlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerManager.swift; sourceTree = "<group>"; };
 		8EBBAD4CA1D80BCF47C42430 /* Swiftify.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Swiftify.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -58,11 +64,13 @@
 		AE95AE8EA99EB31F9CE2D06C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		AF0AAB1F34BACA7B0F3F5353 /* DetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViews.swift; sourceTree = "<group>"; };
 		B6077B53A716C4C9707F0B4D /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsView.swift; sourceTree = "<group>"; };
 		C187B116A8622056CC4AA47E /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
 		DB8AB62131834C889BBB1EB2 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveToSheet.swift; sourceTree = "<group>"; };
 		E47E07B50B8AB7364BD96D94 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E63152471936FB65D84D134F /* CreateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSheet.swift; sourceTree = "<group>"; };
+		E7B74EE95DE8203EF529A9CC /* LyricsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -111,6 +119,7 @@
 				AF0AAB1F34BACA7B0F3F5353 /* DetailViews.swift */,
 				32F798C91C8348DB06C3AFE5 /* HomeView.swift */,
 				ABC856203CAD985E07B8FD41 /* LibraryView.swift */,
+				C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */,
 				9253737EC9EB49D97054D3CF /* Player.swift */,
 				859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */,
 				DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */,
@@ -178,6 +187,7 @@
 				A5F67F56B92463043E2619CB /* App */,
 				1601294639E349D2F75944F3 /* Auth */,
 				A0D2E2023535603B5F031A36 /* Library */,
+				C604705F47E23563062801A6 /* Lyrics */,
 				14C49127DEFC66E8A7ADEB3B /* Models */,
 				430CBD2BBB378A424C2E71D9 /* Player */,
 				801BCDFA943D51C19B813A03 /* Queue */,
@@ -185,6 +195,16 @@
 				4AC326290425455771E49CAF /* UI */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		C604705F47E23563062801A6 /* Lyrics */ = {
+			isa = PBXGroup;
+			children = (
+				54D5DB397DA92DA5F03AFE50 /* Lyrics.swift */,
+				82BEDC5693E4D9400D8C7C04 /* LyricsClient.swift */,
+				E7B74EE95DE8203EF529A9CC /* LyricsStore.swift */,
+			);
+			path = Lyrics;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -279,6 +299,10 @@
 				31AB5FD3EEA24DD2A06F75B8 /* HomeView.swift in Sources */,
 				343987956BAB9D90269A3A05 /* LibraryStore.swift in Sources */,
 				A1D7DC7DA384A5A22516F889 /* LibraryView.swift in Sources */,
+				20DC5D18BC0C435070D71B24 /* Lyrics.swift in Sources */,
+				DFB53B4B8AD6EAFBBBA6B94B /* LyricsClient.swift in Sources */,
+				04E6AEFF7A2A0DE9E9E6BBB8 /* LyricsStore.swift in Sources */,
+				D741C27E8280915C8714DEF9 /* LyricsView.swift in Sources */,
 				11B7039050FC8BFA776CB9D2 /* MembershipStore.swift in Sources */,
 				E7DF497C9E42390C4E4987E9 /* Models.swift in Sources */,
 				5007E9366424709DEBCEDCF7 /* PKCE.swift in Sources */,
