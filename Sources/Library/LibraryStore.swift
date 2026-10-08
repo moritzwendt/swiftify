@@ -66,6 +66,21 @@ final class LibraryStore {
 
     func clearMessage() { message = nil }
 
+    func report(_ text: String) { message = text }
+
+    func updatePlaylist(_ playlist: Playlist, name: String, description: String, isPublic: Bool, collaborative: Bool) async throws {
+        if !isSample {
+            var body: [String: Any] = ["name": name, "description": description, "public": isPublic]
+            body["collaborative"] = isPublic ? false : collaborative
+            try await api.perform("PUT", "playlists/\(playlist.id)", body: body)
+        }
+        guard let index = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[index].name = name
+        playlists[index].description = description
+        playlists[index].public = isPublic
+        playlists[index].collaborative = isPublic ? false : collaborative
+    }
+
     func isSaved(_ album: Album) -> Bool {
         albums.contains { $0.album.id == album.id }
     }
@@ -84,7 +99,11 @@ final class LibraryStore {
         }
         if isSample { return }
         do {
-            try await api.perform(saved ? "PUT" : "DELETE", "me/library", query: ["uris": album.uri])
+            do {
+                try await api.perform(saved ? "PUT" : "DELETE", "me/library", query: ["uris": album.uri])
+            } catch {
+                try await api.perform(saved ? "PUT" : "DELETE", "me/albums", query: ["ids": album.id])
+            }
         } catch {
             albums = previous
             message = error.localizedDescription
@@ -101,7 +120,11 @@ final class LibraryStore {
         }
         if isSample { return }
         do {
-            try await api.perform(saved ? "PUT" : "DELETE", "me/library", query: ["uris": playlist.uri])
+            do {
+                try await api.perform(saved ? "PUT" : "DELETE", "me/library", query: ["uris": playlist.uri])
+            } catch {
+                try await api.perform(saved ? "PUT" : "DELETE", "playlists/\(playlist.id)/followers")
+            }
         } catch {
             playlists = previous
             message = error.localizedDescription

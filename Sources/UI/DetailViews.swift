@@ -72,62 +72,73 @@ struct PlaylistDetailView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
     @Environment(AppSettings.self) private var settings
+    @Environment(\.dismiss) private var dismiss
     @State private var tracks: [Track] = []
     @State private var isComplete = false
+    @State private var showMenu = false
+    @State private var editMode: EditMode = .inactive
+    @State private var serial = SerialTasks()
 
-    private var canList: Bool { library.canListTracks(of: playlist) }
-    private var isOwned: Bool { playlist.owner?.id == library.me?.id }
+    private var live: Playlist { library.playlists.first { $0.id == playlist.id } ?? playlist }
+    private var canList: Bool { library.canListTracks(of: live) }
+    private var isOwned: Bool { library.me != nil && live.owner?.id == library.me?.id }
+    private var isEditing: Bool { editMode == .active }
 
     private var trailingAction: HeaderAction {
         if isOwned {
-            let pinned = library.isPinned(playlist.uri)
+            let pinned = library.isPinned(live.uri)
             return HeaderAction(symbol: pinned ? "pin.fill" : "pin", label: pinned ? "Unpin" : "Pin", isOn: pinned) {
-                withAnimation(.snappy) { library.togglePin(playlist.uri) }
+                withAnimation(.snappy) { library.togglePin(live.uri) }
             }
         }
-        let saved = library.isSaved(playlist)
+        let saved = library.isSaved(live)
         return HeaderAction(
             symbol: saved ? "checkmark.circle.fill" : "plus.circle",
             label: saved ? "Remove from library" : "Save to library",
             isOn: saved
         ) {
-            Task { await library.setSaved(playlist, saved: !saved) }
+            Task { await library.setSaved(live, saved: !saved) }
         }
     }
 
     private var subtitle: String {
-        let owner = playlist.owner?.displayName ?? "Spotify"
-        guard let count = playlist.trackCount else { return owner }
+        let owner = live.owner?.displayName ?? "Spotify"
+        guard let count = live.trackCount else { return owner }
         return "\(owner) \u{2022} \(count) songs"
     }
 
     var body: some View {
         List {
             DetailHeader(
-                imageURL: playlist.images.url(atLeast: 640),
-                title: playlist.name,
+                imageURL: live.images.url(atLeast: 640),
+                title: live.name,
                 subtitle: subtitle,
-                isPlaying: player.isPlaying(context: playlist.uri),
+                isPlaying: player.isPlaying(context: live.uri),
                 leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
                     Task { await player.toggleShuffle() }
                 },
                 trailing: trailingAction
             ) {
-                Task { await player.playOrPause(context: playlist.uri) }
+                Task { await player.playOrPause(context: live.uri) }
             }
             .detailRow(top: 0)
 
             if canList {
                 ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                     Button {
-                        Task { await player.play(context: playlist.uri, offset: track.uri, showing: track) }
+                        guard !isEditing else { return }
+                        Task { await player.play(context: live.uri, offset: track.uri, showing: track) }
                     } label: {
                         TrackRow(track: track, artworkURL: track.album?.images.url(atLeast: 100))
                     }
                     .buttonStyle(.plain)
                     .trackActions(track)
                     .detailRow()
+                    .moveDisabled(!isEditing)
+                    .deleteDisabled(!isEditing)
                 }
+                .onMove(perform: move)
+                .onDelete(perform: remove)
             } else {
                 Text("The track list is not available for playlists you do not own")
                     .font(.footnote)
@@ -138,8 +149,90 @@ struct PlaylistDetailView: View {
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
+        .environment(\.editMode, $editMode)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if isEditing {
+                    Button("Done") { editMode = .inactive }
+                } else {
+                    Button {
+                        showMenu = true
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                    .accessibilityLabel("More")
+                }
+            }
+        }
+        .sheet(isPresented: $showMenu) {
+            PlaylistMenuSheet(
+                playlist: live,
+                tracks: tracks,
+                isOwned: isOwned,
+                canEdit: canList && (isOwned || live.collaborative == true),
+                isReady: isComplete,
+                onEdit: { editMode = .active },
+                onAdded: { track, snapshot in
+                    tracks.append(track)
+                    persist(snapshot: snapshot)
+                },
+                onDeleted: { dismiss() }
+            )
+        }
         .task { await load() }
+    }
+
+    private func move(from source: IndexSet, to destination: Int) {
+        guard let from = source.first else { return }
+        let previous = tracks
+        tracks.move(fromOffsets: source, toOffset: destination)
+        let id = live.id
+        serial.run {
+            if library.isSample { return }
+            do {
+                let response: SnapshotResponse = try await library.api.request(
+                    "PUT",
+                    "playlists/\(id)/items",
+                    body: ["range_start": from, "insert_before": destination, "range_length": 1]
+                )
+                persist(snapshot: response.snapshotId)
+            } catch {
+                tracks = previous
+                library.report(error.localizedDescription)
+            }
+        }
+    }
+
+    private func remove(at offsets: IndexSet) {
+        let uris = Set(offsets.map { tracks[$0].uri })
+        let previous = tracks
+        tracks.removeAll { uris.contains($0.uri) }
+        let id = live.id
+        serial.run {
+            if library.isSample { return }
+            do {
+                let response: SnapshotResponse = try await library.api.request(
+                    "DELETE",
+                    "playlists/\(id)/items",
+                    body: ["items": uris.map { ["uri": $0] }]
+                )
+                library.membership.recordRemoval(playlistID: id, uris: Array(uris), snapshot: response.snapshotId)
+                persist(snapshot: response.snapshotId)
+            } catch {
+                tracks = previous
+                library.report(error.localizedDescription)
+            }
+        }
+    }
+
+    private func persist(snapshot: String?) {
+        guard let snapshot else { return }
+        library.updateSnapshot(playlistID: live.id, snapshot: snapshot)
+        guard settings.cacheLists else { return }
+        let key = live.id
+        let current = tracks
+        Task { await TrackListCache.save(key: key, stamp: snapshot, tracks: current) }
     }
 
     private func load() async {
@@ -149,18 +242,18 @@ struct PlaylistDetailView: View {
             return
         }
         guard canList, !isComplete else { return }
-        if settings.cacheLists, let snapshot = playlist.snapshotId,
-           let cached = await TrackListCache.load(key: playlist.id), cached.stamp == snapshot {
+        if settings.cacheLists, let snapshot = live.snapshotId,
+           let cached = await TrackListCache.load(key: live.id), cached.stamp == snapshot {
             tracks = cached.tracks
             isComplete = true
             await prefetchImages()
             return
         }
         tracks = []
-        guard let result = await TrackListLoader.playlist(api: library.api, id: playlist.id, progress: { tracks = $0 }) else { return }
+        guard let result = await TrackListLoader.playlist(api: library.api, id: live.id, progress: { tracks = $0 }) else { return }
         isComplete = true
-        if settings.cacheLists, let snapshot = playlist.snapshotId {
-            await TrackListCache.save(key: playlist.id, stamp: snapshot, tracks: result)
+        if settings.cacheLists, let snapshot = live.snapshotId {
+            await TrackListCache.save(key: live.id, stamp: snapshot, tracks: result)
         }
         await prefetchImages()
     }
@@ -176,6 +269,7 @@ struct AlbumDetailView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
     @State private var tracks: [Track] = []
+    @State private var showMenu = false
 
     private var subtitle: String {
         [album.artistLine, album.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " \u{2022} ")
@@ -218,6 +312,19 @@ struct AlbumDetailView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showMenu = true
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel("More")
+            }
+        }
+        .sheet(isPresented: $showMenu) {
+            AlbumMenuSheet(album: album, tracks: tracks)
+        }
         .task {
             if let embedded = album.tracks?.items, !embedded.isEmpty {
                 tracks = embedded

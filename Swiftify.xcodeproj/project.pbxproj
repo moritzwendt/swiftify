@@ -36,6 +36,7 @@
 		B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AB62131834C889BBB1EB2 /* AuthManager.swift */; };
 		BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5125EC825CC5FD3461D2E70A /* CacheSettings.swift */; };
 		D43019C252028289DC589E1D /* CreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63152471936FB65D84D134F /* CreateSheet.swift */; };
+		D47392733FBB19D85B3AC1BE /* DetailMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D45DCD69F6C11658BC8898 /* DetailMenu.swift */; };
 		D741C27E8280915C8714DEF9 /* LyricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */; };
 		DB5A83FE33457199874C0294 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9253737EC9EB49D97054D3CF /* Player.swift */; };
 		DFB53B4B8AD6EAFBBBA6B94B /* LyricsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82BEDC5693E4D9400D8C7C04 /* LyricsClient.swift */; };
@@ -46,6 +47,7 @@
 
 /* Begin PBXFileReference section */
 		055BBB40A64B448CFC70A1FF /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
+		11D45DCD69F6C11658BC8898 /* DetailMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailMenu.swift; sourceTree = "<group>"; };
 		1D790EFBDB63E268712C9DD2 /* TrackListCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackListCache.swift; sourceTree = "<group>"; };
 		2F921DF436A201E5E30C2527 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
 		32F798C91C8348DB06C3AFE5 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 				9CBE2F2DF5C4EE0DC2DB1B2D /* ChromeState.swift */,
 				B6077B53A716C4C9707F0B4D /* Components.swift */,
 				E63152471936FB65D84D134F /* CreateSheet.swift */,
+				11D45DCD69F6C11658BC8898 /* DetailMenu.swift */,
 				AF0AAB1F34BACA7B0F3F5353 /* DetailViews.swift */,
 				32F798C91C8348DB06C3AFE5 /* HomeView.swift */,
 				ABC856203CAD985E07B8FD41 /* LibraryView.swift */,
@@ -340,6 +343,7 @@
 				9AA1BF32A0D4314CC516E60E /* ChromeState.swift in Sources */,
 				519007480FE4DA19E60C3D4D /* Components.swift in Sources */,
 				D43019C252028289DC589E1D /* CreateSheet.swift in Sources */,
+				D47392733FBB19D85B3AC1BE /* DetailMenu.swift in Sources */,
 				F38BDB36147DC11AA93DB29C /* DetailViews.swift in Sources */,
 				31AB5FD3EEA24DD2A06F75B8 /* HomeView.swift in Sources */,
 				0351494059BFD9CEA05B6CAD /* ImageCache.swift in Sources */,

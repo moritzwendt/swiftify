@@ -53,6 +53,35 @@ final class QueueStore {
         await add(uri: track.uri)
     }
 
+    func add(tracks: [Track], limit: Int = 100) async {
+        let batch = Array(tracks.prefix(limit))
+        guard !batch.isEmpty else { return }
+        if isSample {
+            for track in batch {
+                upcoming.insert(track, at: min(queuedCount, upcoming.count))
+                queuedCount += 1
+            }
+            addedCount += 1
+            message = batch.count == 1 ? "Added to queue" : "Added \(batch.count) songs to queue"
+            return
+        }
+        var count = 0
+        for track in batch {
+            do {
+                try await api.perform("POST", "me/player/queue", query: ["uri": track.uri])
+                added.append(track.uri)
+                count += 1
+            } catch {
+                message = error.localizedDescription
+                break
+            }
+        }
+        if count > 0 {
+            addedCount += 1
+            message = count == 1 ? "Added to queue" : "Added \(count) songs to queue"
+        }
+    }
+
     func add(uri: String) async {
         if isSample {
             confirm()
