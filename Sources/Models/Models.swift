@@ -197,6 +197,29 @@ struct PlayerContext: Decodable {
     let type: String?
 }
 
+struct QueueResponse: Decodable {
+    let currentlyPlaying: Track?
+    let queue: [Track]
+
+    private enum CodingKeys: String, CodingKey { case currentlyPlaying, queue }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        currentlyPlaying = try? container.decodeIfPresent(Track.self, forKey: .currentlyPlaying)
+        var result: [Track] = []
+        if var list = try? container.nestedUnkeyedContainer(forKey: .queue) {
+            while !list.isAtEnd {
+                if let value = try? list.decode(Track.self) {
+                    result.append(value)
+                } else {
+                    _ = try? list.decode(Skip.self)
+                }
+            }
+        }
+        queue = result
+    }
+}
+
 struct PlayerStateResponse: Decodable {
     let isPlaying: Bool
     let context: PlayerContext?

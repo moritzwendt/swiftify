@@ -300,6 +300,7 @@ struct SmartPlaylistForm: View {
 struct LinkForm: View {
     let done: () -> Void
     @Environment(PlayerManager.self) private var player
+    @Environment(QueueStore.self) private var queue
     @State private var link = ""
     @State private var errorMessage: String?
 
@@ -337,7 +338,7 @@ struct LinkForm: View {
                         return
                     }
                     Task {
-                        await player.addToQueue(parsed.uri)
+                        await queue.add(uri: parsed.uri)
                         done()
                     }
                 }

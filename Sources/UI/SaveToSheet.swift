@@ -315,11 +315,15 @@ struct SaveToSheet: View {
 
 struct TrackActionsModifier: ViewModifier {
     let track: Track
+    @Environment(QueueStore.self) private var queue
     @State private var showSave = false
 
     func body(content: Content) -> some View {
         content
             .contextMenu {
+                Button("Add to queue", systemImage: "text.line.last.and.arrowtriangle.forward") {
+                    Task { await queue.add(track) }
+                }
                 Button("Add to playlist", systemImage: "text.badge.plus") { showSave = true }
             }
             .sheet(isPresented: $showSave) {

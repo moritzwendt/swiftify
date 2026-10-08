@@ -130,6 +130,7 @@ struct FullPlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var tint: Color = .gray
     @State private var showSave = false
+    @State private var showQueue = false
     @State private var savedWhenOpened = false
 
     private var isSaved: Bool {
@@ -218,9 +219,16 @@ struct FullPlayerView: View {
                         }
                     }
 
-                    Label(player.deviceName ?? "No device", systemImage: "airplayaudio")
-                        .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.7))
+                    HStack(spacing: 12) {
+                        Label(player.deviceName ?? "No device", systemImage: "airplayaudio")
+                            .font(.footnote)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        transportButton("list.bullet", label: "Queue") {
+                            showQueue = true
+                        }
+                    }
                 }
                 .padding(.bottom, 48)
             }
@@ -243,6 +251,9 @@ struct FullPlayerView: View {
                 SaveToSheet(track: track, fromPlus: !savedWhenOpened)
             }
         }
+        .sheet(isPresented: $showQueue) {
+            QueueSheet()
+        }
         .haptic(.impact, trigger: player.isPlaying)
         .haptic(.selection, trigger: player.shuffle)
         .haptic(.selection, trigger: player.repeatMode)
@@ -259,9 +270,10 @@ struct FullPlayerView: View {
         _ symbol: String,
         size: Font = .title3,
         active: Bool = false,
+        label: String? = nil,
         action: @escaping () async -> Void
     ) -> some View {
-        Button {
+        let button = Button {
             Task { await action() }
         } label: {
             Image(systemName: symbol)
@@ -271,5 +283,12 @@ struct FullPlayerView: View {
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
+        return Group {
+            if let label {
+                button.accessibilityLabel(label)
+            } else {
+                button
+            }
+        }
     }
 }

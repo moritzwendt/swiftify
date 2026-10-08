@@ -54,6 +54,7 @@ struct LoginView: View {
 
 struct MainTabView: View {
     @Environment(PlayerManager.self) private var player
+    @Environment(QueueStore.self) private var queue
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
     @Environment(ChromeState.self) private var chrome
@@ -86,6 +87,7 @@ struct MainTabView: View {
                 .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
         }
         .overlay(alignment: .top) { errorToast }
+        .haptic(.success, trigger: queue.addedCount)
         .task {
             await library.load()
             player.startPolling()
@@ -102,7 +104,7 @@ struct MainTabView: View {
 
     @ViewBuilder
     private var errorToast: some View {
-        if let message = player.errorMessage {
+        if let message = player.errorMessage ?? queue.message {
             Text(message)
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 16)
@@ -110,9 +112,12 @@ struct MainTabView: View {
                 .glassEffect(.regular, in: .capsule)
                 .padding(.top, 8)
                 .transition(.move(edge: .top).combined(with: .opacity))
-                .task(id: message) {
+                .task(id: "\(message)|\(queue.addedCount)") {
                     try? await Task.sleep(for: .seconds(3))
-                    withAnimation { player.clearError() }
+                    withAnimation {
+                        player.clearError()
+                        queue.clearMessage()
+                    }
                 }
         }
     }

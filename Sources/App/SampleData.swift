@@ -8,7 +8,7 @@ enum SampleData {
         return try! decoder.decode(T.self, from: Data(json.utf8))
     }
 
-    static func install(library: LibraryStore, player: PlayerManager) {
+    static func install(library: LibraryStore, player: PlayerManager, queue: QueueStore) {
         let me: Me = decode(#"{"id":"me","display_name":"Moritz"}"#)
         let names = ["Daily Mix 1", "Late Night Drive", "Gym Energy", "Focus Flow", "Road Trip", "Sunday Jazz", "Indie Gems"]
         let playlists: [Playlist] = names.enumerated().map { index, name in
@@ -22,12 +22,27 @@ enum SampleData {
             decode(#"{"id":"r\#(index)","uri":"spotify:artist:r\#(index)","name":"\#(name)"}"#)
         }
         library.loadSample(me: me, playlists: playlists, albums: albums, artists: artists, likedTotal: 482)
-        let queue: [Track] = [
-            decode(#"{"uri":"spotify:track:t1","name":"The Less I Know The Better","artists":[{"name":"Tame Impala"}],"duration_ms":216000}"#),
-            decode(#"{"uri":"spotify:track:t2","name":"Instant Crush","artists":[{"name":"Daft Punk"}],"duration_ms":337000}"#),
-            decode(#"{"uri":"spotify:track:t3","name":"Nights","artists":[{"name":"Frank Ocean"}],"duration_ms":307000}"#)
-        ]
         library.membership.loadSample(["p1": ["spotify:track:t1"]])
-        player.loadSample(queue: queue, positionMs: 64000, context: "spotify:playlist:p0")
+        player.loadSample(queue: Array(tracks.prefix(3)), positionMs: 64000, context: "spotify:playlist:p0")
+        queue.loadSample(upcoming: Array(tracks.dropFirst(3).prefix(8)))
+    }
+
+    static let tracks: [Track] = [
+        track("t1", "The Less I Know The Better", "Tame Impala", 216000),
+        track("t2", "Instant Crush", "Daft Punk", 337000),
+        track("t3", "Nights", "Frank Ocean", 307000),
+        track("t4", "Let It Happen", "Tame Impala", 467000),
+        track("t5", "Get Lucky", "Daft Punk", 369000),
+        track("t6", "Pink + White", "Frank Ocean", 184000),
+        track("t7", "Borderline", "Tame Impala", 237000),
+        track("t8", "One More Time", "Daft Punk", 320000),
+        track("t9", "Self Control", "Frank Ocean", 249000),
+        track("t10", "Eventually", "Tame Impala", 319000),
+        track("t11", "Digital Love", "Daft Punk", 301000),
+        track("t12", "Ivy", "Frank Ocean", 249000)
+    ]
+
+    private static func track(_ id: String, _ name: String, _ artist: String, _ duration: Int) -> Track {
+        decode(#"{"uri":"spotify:track:\#(id)","name":"\#(name)","artists":[{"name":"\#(artist)"}],"duration_ms":\#(duration)}"#)
     }
 }

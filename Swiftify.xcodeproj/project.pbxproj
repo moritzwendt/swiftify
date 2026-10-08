@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0FA3F4518C02BF445C3D88EA /* QueueSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */; };
 		11B7039050FC8BFA776CB9D2 /* MembershipStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B875DCE444C5608C150FB1 /* MembershipStore.swift */; };
 		11CD632230B7400670CEFFC8 /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055BBB40A64B448CFC70A1FF /* SampleData.swift */; };
 		1F02C94439C49CE1798E4713 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47E07B50B8AB7364BD96D94 /* SettingsView.swift */; };
@@ -16,6 +17,7 @@
 		5007E9366424709DEBCEDCF7 /* PKCE.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC357319C2EB58FDD95138 /* PKCE.swift */; };
 		519007480FE4DA19E60C3D4D /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6077B53A716C4C9707F0B4D /* Components.swift */; };
 		55565CDD5E6594F6AF7CDAC5 /* PlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9E47EC0CC750B9A6F48F2C /* PlayerManager.swift */; };
+		75AC79F68E1D8305B3085F3E /* QueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B7532A71F786053F98E0BFE /* QueueStore.swift */; };
 		83CAAD95905B1779C9ED5C7A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE95AE8EA99EB31F9CE2D06C /* RootView.swift */; };
 		861AFA475498D4655847FD54 /* SpotifyAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698ECAD27D0B06FC104878DC /* SpotifyAPI.swift */; };
 		90B67186AF43802180483DD9 /* SpotifyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70531C0CBEC205890DDF440A /* SpotifyConfig.swift */; };
@@ -41,9 +43,11 @@
 		448568EAAECAFD202065608F /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftifyApp.swift; sourceTree = "<group>"; };
 		5A2845162E089807930C2FF0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		5B7532A71F786053F98E0BFE /* QueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueStore.swift; sourceTree = "<group>"; };
 		60A73919D7BA1AB3BD998AC6 /* PlaybackTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackTestView.swift; sourceTree = "<group>"; };
 		698ECAD27D0B06FC104878DC /* SpotifyAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyAPI.swift; sourceTree = "<group>"; };
 		70531C0CBEC205890DDF440A /* SpotifyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyConfig.swift; sourceTree = "<group>"; };
+		859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueSheet.swift; sourceTree = "<group>"; };
 		8D9E47EC0CC750B9A6F48F2C /* PlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerManager.swift; sourceTree = "<group>"; };
 		8EBBAD4CA1D80BCF47C42430 /* Swiftify.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Swiftify.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FE4B8428835DB9F4BD3001D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -108,6 +112,7 @@
 				32F798C91C8348DB06C3AFE5 /* HomeView.swift */,
 				ABC856203CAD985E07B8FD41 /* LibraryView.swift */,
 				9253737EC9EB49D97054D3CF /* Player.swift */,
+				859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */,
 				DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */,
 				5A2845162E089807930C2FF0 /* SearchView.swift */,
 			);
@@ -120,6 +125,14 @@
 				C03DF7D8AA1F2DB233741533 /* Sources */,
 				9F7C558FB7D7685AA03F29F0 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		801BCDFA943D51C19B813A03 /* Queue */ = {
+			isa = PBXGroup;
+			children = (
+				5B7532A71F786053F98E0BFE /* QueueStore.swift */,
+			);
+			path = Queue;
 			sourceTree = "<group>";
 		};
 		844D1534E9A3A12049465C1D /* API */ = {
@@ -167,6 +180,7 @@
 				A0D2E2023535603B5F031A36 /* Library */,
 				14C49127DEFC66E8A7ADEB3B /* Models */,
 				430CBD2BBB378A424C2E71D9 /* Player */,
+				801BCDFA943D51C19B813A03 /* Queue */,
 				2C5C17C87F8192A8D4EDC5F2 /* Settings */,
 				4AC326290425455771E49CAF /* UI */,
 			);
@@ -271,6 +285,8 @@
 				9A1BB7F8F550CDD0A1D9B174 /* PlaybackTestView.swift in Sources */,
 				DB5A83FE33457199874C0294 /* Player.swift in Sources */,
 				55565CDD5E6594F6AF7CDAC5 /* PlayerManager.swift in Sources */,
+				0FA3F4518C02BF445C3D88EA /* QueueSheet.swift in Sources */,
+				75AC79F68E1D8305B3085F3E /* QueueStore.swift in Sources */,
 				83CAAD95905B1779C9ED5C7A /* RootView.swift in Sources */,
 				11CD632230B7400670CEFFC8 /* SampleData.swift in Sources */,
 				417AA39FE41CDB0726295828 /* SaveToSheet.swift in Sources */,
