@@ -130,6 +130,10 @@ struct SettingsView: View {
                     PlaybackTestView(auth: auth)
                         .hidesBottomBars()
                 }
+                SettingsRow(title: "SDK diagnostics", symbol: "antenna.radiowaves.left.and.right", color: .teal) {
+                    SDKDiagnosticsView()
+                        .hidesBottomBars()
+                }
             }
 
             Section {
