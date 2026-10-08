@@ -79,7 +79,7 @@ struct MainTabView: View {
             }
         }
         .sheet(isPresented: $showCreate) { CreateSheet() }
-        .sheet(isPresented: $showPlayer) { FullPlayerView() }
+        .fullScreenCover(isPresented: $showPlayer) { FullPlayerView() }
         .overlay(alignment: .top) { errorToast }
         .task {
             await library.load()
