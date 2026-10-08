@@ -84,6 +84,9 @@ final class LibraryStore {
         artists = []
         likedTotal = 0
         recentOrder = []
+        usageCounts = [:]
+        saveCounts = [:]
+        UserDefaults.standard.removeObject(forKey: Self.saveCountsKey)
         membership.reset()
         hasLoaded = false
     }

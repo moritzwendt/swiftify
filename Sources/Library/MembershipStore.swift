@@ -16,6 +16,7 @@ final class MembershipStore {
     @ObservationIgnored private let api: SpotifyAPI
     @ObservationIgnored private var runningScan: Task<Void, Never>?
     @ObservationIgnored private var failureCount = 0
+    @ObservationIgnored private var generation = 0
     @ObservationIgnored var isSample = false
 
     private static let maxTrackCount = 1000
@@ -46,6 +47,7 @@ final class MembershipStore {
     }
 
     func reset() {
+        generation += 1
         runningScan?.cancel()
         runningScan = nil
         tracks = [:]
@@ -66,9 +68,11 @@ final class MembershipStore {
         let pending = playlists.filter(needsScan)
         guard !pending.isEmpty else { return }
         failureCount = 0
+        let startedIn = generation
         let task = Task { await runScan(pending) }
         runningScan = task
         await task.value
+        guard startedIn == generation else { return }
         runningScan = nil
         persist()
     }
@@ -100,6 +104,7 @@ final class MembershipStore {
             skipped.insert(playlist.id)
             return
         }
+        let startedIn = generation
         scanning.insert(playlist.id)
         defer { scanning.remove(playlist.id) }
         var found = Set<String>()
@@ -123,6 +128,7 @@ final class MembershipStore {
             if page.next == nil { break }
             try? await Task.sleep(for: Self.pageDelay)
         }
+        guard startedIn == generation, !Task.isCancelled else { return }
         tracks[playlist.id] = found
         snapshots[playlist.id] = playlist.snapshotId ?? ""
         try? await Task.sleep(for: Self.pageDelay)
