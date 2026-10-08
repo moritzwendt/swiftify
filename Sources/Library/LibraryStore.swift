@@ -15,6 +15,7 @@ final class LibraryStore {
     private(set) var recentOrder: [String] = []
     private(set) var pinned: [String]
     private(set) var usageCounts: [String: Int] = [:]
+    private(set) var message: String?
     @ObservationIgnored private var saveCounts: [String: Int]
 
     @ObservationIgnored let api: SpotifyAPI
@@ -61,6 +62,50 @@ final class LibraryStore {
         var seen = Set<String>()
         recentOrder = contexts.filter { seen.insert($0).inserted }
         usageCounts = Dictionary(grouping: contexts, by: { $0 }).mapValues(\.count)
+    }
+
+    func clearMessage() { message = nil }
+
+    func isSaved(_ album: Album) -> Bool {
+        albums.contains { $0.album.id == album.id }
+    }
+
+    func isSaved(_ playlist: Playlist) -> Bool {
+        playlists.contains { $0.id == playlist.id }
+    }
+
+    func setSaved(_ album: Album, saved: Bool) async {
+        guard isSaved(album) != saved else { return }
+        let previous = albums
+        if saved {
+            albums.insert(SavedAlbum(addedAt: nil, album: album), at: 0)
+        } else {
+            albums.removeAll { $0.album.id == album.id }
+        }
+        if isSample { return }
+        do {
+            try await api.perform(saved ? "PUT" : "DELETE", "me/library", query: ["uris": album.uri])
+        } catch {
+            albums = previous
+            message = error.localizedDescription
+        }
+    }
+
+    func setSaved(_ playlist: Playlist, saved: Bool) async {
+        guard isSaved(playlist) != saved else { return }
+        let previous = playlists
+        if saved {
+            playlists.insert(playlist, at: 0)
+        } else {
+            playlists.removeAll { $0.id == playlist.id }
+        }
+        if isSample { return }
+        do {
+            try await api.perform(saved ? "PUT" : "DELETE", "me/library", query: ["uris": playlist.uri])
+        } catch {
+            playlists = previous
+            message = error.localizedDescription
+        }
     }
 
     func usage(of uri: String) -> Int {

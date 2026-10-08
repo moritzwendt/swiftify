@@ -1,5 +1,13 @@
 import SwiftUI
 
+struct HeaderAction {
+    let symbol: String
+    let label: String
+    var isOn = false
+    var isEnabled = true
+    let action: () -> Void
+}
+
 struct DetailHeader: View {
     let imageURL: URL?
     var liked = false
@@ -7,10 +15,8 @@ struct DetailHeader: View {
     let title: String
     let subtitle: String
     let isPlaying: Bool
-    var isShuffling = false
-    var onShuffle: (() -> Void)?
-    var onAdd: (() -> Void)?
-    var addEnabled = true
+    var leading: HeaderAction?
+    var trailing: HeaderAction?
     let onPlay: () -> Void
 
     var body: some View {
@@ -35,15 +41,9 @@ struct DetailHeader: View {
                     .multilineTextAlignment(.center)
             }
             HStack(spacing: 20) {
-                if let onShuffle {
-                    sideButton("shuffle", label: "Shuffle", isOn: isShuffling, action: onShuffle)
-                }
+                if let leading { sideButton(leading) }
                 PlayButton(isPlaying: isPlaying, action: onPlay)
-                if let onAdd {
-                    sideButton("plus.circle", label: "Add to playlist", isOn: false, action: onAdd)
-                        .disabled(!addEnabled)
-                        .opacity(addEnabled ? 1 : 0.4)
-                }
+                if let trailing { sideButton(trailing) }
             }
             .padding(.top, 4)
         }
@@ -51,16 +51,19 @@ struct DetailHeader: View {
         .padding(.vertical, 12)
     }
 
-    private func sideButton(_ symbol: String, label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
+    private func sideButton(_ item: HeaderAction) -> some View {
+        Button(action: item.action) {
+            Image(systemName: item.symbol)
                 .font(.system(size: 26))
-                .foregroundStyle(isOn ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
+                .foregroundStyle(item.isOn ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
+                .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .disabled(!item.isEnabled)
+        .opacity(item.isEnabled ? 1 : 0.4)
+        .accessibilityLabel(item.label)
     }
 }
 
@@ -71,9 +74,26 @@ struct PlaylistDetailView: View {
     @Environment(AppSettings.self) private var settings
     @State private var tracks: [Track] = []
     @State private var isComplete = false
-    @State private var showAdd = false
 
     private var canList: Bool { library.canListTracks(of: playlist) }
+    private var isOwned: Bool { playlist.owner?.id == library.me?.id }
+
+    private var trailingAction: HeaderAction {
+        if isOwned {
+            let pinned = library.isPinned(playlist.uri)
+            return HeaderAction(symbol: pinned ? "pin.fill" : "pin", label: pinned ? "Unpin" : "Pin", isOn: pinned) {
+                withAnimation(.snappy) { library.togglePin(playlist.uri) }
+            }
+        }
+        let saved = library.isSaved(playlist)
+        return HeaderAction(
+            symbol: saved ? "checkmark.circle.fill" : "plus.circle",
+            label: saved ? "Remove from library" : "Save to library",
+            isOn: saved
+        ) {
+            Task { await library.setSaved(playlist, saved: !saved) }
+        }
+    }
 
     private var subtitle: String {
         let owner = playlist.owner?.displayName ?? "Spotify"
@@ -88,10 +108,10 @@ struct PlaylistDetailView: View {
                 title: playlist.name,
                 subtitle: subtitle,
                 isPlaying: player.isPlaying(context: playlist.uri),
-                isShuffling: player.shuffle,
-                onShuffle: { Task { await player.playShuffled(context: playlist.uri) } },
-                onAdd: { showAdd = true },
-                addEnabled: canList && isComplete && !tracks.isEmpty
+                leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
+                    Task { await player.toggleShuffle() }
+                },
+                trailing: trailingAction
             ) {
                 Task { await player.playOrPause(context: playlist.uri) }
             }
@@ -119,14 +139,6 @@ struct PlaylistDetailView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showAdd) {
-            AddToPlaylistSheet(
-                title: playlist.name,
-                imageURL: playlist.images.url(atLeast: 100),
-                uris: tracks.map(\.uri),
-                excludingID: playlist.id
-            )
-        }
         .task { await load() }
     }
 
@@ -164,7 +176,6 @@ struct AlbumDetailView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
     @State private var tracks: [Track] = []
-    @State private var showAdd = false
 
     private var subtitle: String {
         [album.artistLine, album.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " \u{2022} ")
@@ -177,10 +188,17 @@ struct AlbumDetailView: View {
                 title: album.name,
                 subtitle: subtitle,
                 isPlaying: player.isPlaying(context: album.uri),
-                isShuffling: player.shuffle,
-                onShuffle: { Task { await player.playShuffled(context: album.uri) } },
-                onAdd: { showAdd = true },
-                addEnabled: !tracks.isEmpty
+                leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
+                    Task { await player.toggleShuffle() }
+                },
+                trailing: HeaderAction(
+                    symbol: library.isSaved(album) ? "checkmark.circle.fill" : "plus.circle",
+                    label: library.isSaved(album) ? "Remove from library" : "Save to library",
+                    isOn: library.isSaved(album)
+                ) {
+                    let saved = library.isSaved(album)
+                    Task { await library.setSaved(album, saved: !saved) }
+                }
             ) {
                 Task { await player.playOrPause(context: album.uri) }
             }
@@ -200,13 +218,6 @@ struct AlbumDetailView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showAdd) {
-            AddToPlaylistSheet(
-                title: album.name,
-                imageURL: album.images.url(atLeast: 100),
-                uris: tracks.map(\.uri)
-            )
-        }
         .task {
             if let embedded = album.tracks?.items, !embedded.isEmpty {
                 tracks = embedded

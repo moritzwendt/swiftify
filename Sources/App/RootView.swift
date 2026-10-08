@@ -109,7 +109,7 @@ struct MainTabView: View {
 
     @ViewBuilder
     private var errorToast: some View {
-        if let message = player.errorMessage ?? queue.message {
+        if let message = player.errorMessage ?? queue.message ?? library.message {
             Text(message)
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 16)
@@ -122,6 +122,7 @@ struct MainTabView: View {
                     withAnimation {
                         player.clearError()
                         queue.clearMessage()
+                        library.clearMessage()
                     }
                 }
         }

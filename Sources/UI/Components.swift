@@ -210,6 +210,7 @@ struct PlayButton: View {
             }
             .font(.headline)
             .foregroundStyle(settings.onAccent)
+            .frame(minWidth: 72)
             .padding(.horizontal, 12)
             .contentTransition(.symbolEffect(.replace))
         }
