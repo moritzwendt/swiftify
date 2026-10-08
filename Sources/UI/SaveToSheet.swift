@@ -11,6 +11,13 @@ struct SaveToSheet: View {
             case .playlist(let playlist): playlist.id
             }
         }
+
+        var title: String {
+            switch self {
+            case .liked: "Liked Songs"
+            case .playlist(let playlist): playlist.name
+            }
+        }
     }
 
     let track: Track
@@ -21,11 +28,21 @@ struct SaveToSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var liked: Bool?
     @State private var rows: [Row] = []
+    @State private var initialAssigned: Set<String> = []
     @State private var ready = false
     @State private var pending: Set<String> = []
     @State private var errorMessage: String?
+    @State private var query = ""
+    @State private var showNew = false
+    @State private var newName = ""
 
     private var membership: MembershipStore { library.membership }
+
+    private var visibleRows: [Row] {
+        let needle = query.trimmingCharacters(in: .whitespaces)
+        guard !needle.isEmpty else { return rows }
+        return rows.filter { $0.title.localizedCaseInsensitiveContains(needle) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -37,13 +54,27 @@ struct SaveToSheet: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            .safeAreaBar(edge: .top, spacing: 0) { header }
             .navigationTitle("Save to")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Find a playlist")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("New playlist", systemImage: "plus") {
+                        newName = ""
+                        showNew = true
+                    }
+                    .tint(.primary)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .close) { dismiss() }
                         .tint(.primary)
                 }
+            }
+            .alert("New playlist", isPresented: $showNew) {
+                TextField("Name", text: $newName)
+                Button("Create") { Task { await createPlaylist() } }
+                Button("Cancel", role: .cancel) { newName = "" }
             }
             .haptic(.selection, trigger: liked)
             .task { await prepare() }
@@ -51,48 +82,86 @@ struct SaveToSheet: View {
         .presentationDetents([.medium, .large])
     }
 
+    private var header: some View {
+        HStack(spacing: 12) {
+            ArtworkView(url: track.album?.images.url(atLeast: 100), cornerRadius: 6)
+                .frame(width: 44, height: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(track.name)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Text(track.artistLine)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
+    }
+
     private var list: some View {
-        List {
+        let assigned = visibleRows.filter { initialAssigned.contains($0.id) }
+        let others = visibleRows.filter { !initialAssigned.contains($0.id) }
+        return List {
             if let errorMessage {
                 Text(errorMessage)
                     .font(.footnote)
                     .foregroundStyle(.red)
                     .listRowSeparator(.hidden)
             }
-            ForEach(rows) { row in
-                switch row {
-                case .liked:
-                    Button {
-                        Task { await toggleLiked() }
-                    } label: {
-                        rowLabel(
-                            title: "Liked Songs",
-                            isOn: liked == true,
-                            isBusy: pending.contains("liked")
-                        ) {
-                            LikedArtwork()
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .listRowSeparator(.hidden)
-                case .playlist(let playlist):
-                    Button {
-                        Task { await toggle(playlist) }
-                    } label: {
-                        rowLabel(
-                            title: playlist.name,
-                            isOn: membership.contains(playlist.id, uri: track.uri) == true,
-                            isBusy: pending.contains(playlist.id)
-                        ) {
-                            ArtworkView(url: playlist.images.url(atLeast: 100), cornerRadius: 6)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .listRowSeparator(.hidden)
+
+            if !assigned.isEmpty {
+                Section {
+                    ForEach(assigned) { rowButton($0) }
+                } header: {
+                    if !others.isEmpty { Text("Saved in") }
+                }
+            }
+            if !others.isEmpty {
+                Section {
+                    ForEach(others) { rowButton($0) }
+                } header: {
+                    if !assigned.isEmpty { Text("Your playlists") }
                 }
             }
         }
         .listStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func rowButton(_ row: Row) -> some View {
+        switch row {
+        case .liked:
+            Button {
+                Task { await toggleLiked() }
+            } label: {
+                rowLabel(
+                    title: "Liked Songs",
+                    isOn: liked == true,
+                    isBusy: pending.contains("liked")
+                ) {
+                    LikedArtwork()
+                }
+            }
+            .buttonStyle(.plain)
+            .listRowSeparator(.hidden)
+        case .playlist(let playlist):
+            Button {
+                Task { await toggle(playlist) }
+            } label: {
+                rowLabel(
+                    title: playlist.name,
+                    isOn: membership.contains(playlist.id, uri: track.uri) == true,
+                    isBusy: pending.contains(playlist.id)
+                ) {
+                    ArtworkView(url: playlist.images.url(atLeast: 100), cornerRadius: 6)
+                }
+            }
+            .buttonStyle(.plain)
+            .listRowSeparator(.hidden)
+        }
     }
 
     private func rowLabel<Art: View>(
@@ -112,6 +181,7 @@ struct SaveToSheet: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
                     .foregroundStyle(.tint)
+                    .symbolEffect(.bounce, value: isOn)
             } else {
                 Image(systemName: "circle")
                     .font(.title3)
@@ -133,7 +203,39 @@ struct SaveToSheet: View {
             await toggleLiked()
         }
         rows = buildRows()
+        initialAssigned = Set(rows.compactMap { row -> String? in
+            switch row {
+            case .liked: liked == true ? row.id : nil
+            case .playlist(let playlist): membership.contains(playlist.id, uri: track.uri) == true ? row.id : nil
+            }
+        })
         ready = true
+    }
+
+    private func createPlaylist() async {
+        let name = newName.trimmingCharacters(in: .whitespaces)
+        newName = ""
+        guard !name.isEmpty, !library.isSample else { return }
+        errorMessage = nil
+        do {
+            let created = try await library.createPlaylist(named: name)
+            let response: SnapshotResponse = try await library.api.request(
+                "POST",
+                "playlists/\(created.id)/items",
+                body: ["uris": [track.uri]]
+            )
+            membership.record(playlistID: created.id, uri: track.uri, added: true, snapshot: response.snapshotId)
+            if let snapshot = response.snapshotId {
+                library.updateSnapshot(playlistID: created.id, snapshot: snapshot)
+            }
+            library.noteSave(created.uri)
+            let inserted: Row = .playlist(created)
+            let insertAt = rows.first.map { if case .liked = $0, liked == true { 1 } else { 0 } } ?? 0
+            rows.insert(inserted, at: insertAt)
+            initialAssigned.insert(inserted.id)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func buildRows() -> [Row] {
