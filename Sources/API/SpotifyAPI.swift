@@ -51,8 +51,18 @@ struct SpotifyAPI {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
-        return APIResponse(status: (response as? HTTPURLResponse)?.statusCode ?? 0, data: data)
+        var attempt = 0
+        while true {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let http = response as? HTTPURLResponse
+            if http?.statusCode == 429, attempt < 2,
+               let wait = http?.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init), wait <= 10 {
+                attempt += 1
+                try await Task.sleep(for: .seconds(wait + 0.2))
+                continue
+            }
+            return APIResponse(status: http?.statusCode ?? 0, data: data)
+        }
     }
 
     func get<T: Decodable>(_ path: String, query: [String: String] = [:]) async throws -> T {

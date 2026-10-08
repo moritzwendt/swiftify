@@ -6,6 +6,12 @@ struct CachedTrackList: Codable {
     let tracks: [Track]
 }
 
+func directoryStats(_ directory: URL) -> (count: Int, bytes: Int) {
+    let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey])) ?? []
+    let bytes = files.reduce(0) { $0 + ((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
+    return (files.count, bytes)
+}
+
 enum TrackListCache {
     private static let version = 1
 
@@ -34,8 +40,53 @@ enum TrackListCache {
         }.value
     }
 
+    static func stats() async -> (count: Int, bytes: Int) {
+        let folder = directory
+        return await Task.detached(priority: .utility) { directoryStats(folder) }.value
+    }
+
     static func clear() {
         try? FileManager.default.removeItem(at: directory)
+    }
+}
+
+enum TrackListLoader {
+    struct LikedResult {
+        let tracks: [Track]
+        let stamp: String
+        let fromCache: Bool
+    }
+
+    @MainActor
+    static func playlist(api: SpotifyAPI, id: String, progress: ([Track]) -> Void) async -> [Track]? {
+        let path = "playlists/\(id)/items"
+        let first: Page<PlaylistItem>? = try? await api.get(path, query: ["limit": "50", "offset": "0"])
+        guard let first else { return nil }
+        var tracks = first.items.compactMap(\.resolved)
+        progress(tracks)
+        let finished = await PagedLoader.loadRemaining(api: api, path: path, first: first) {
+            tracks += $0.compactMap(\.resolved)
+            progress(tracks)
+        }
+        return finished ? tracks : nil
+    }
+
+    @MainActor
+    static func liked(api: SpotifyAPI, known: CachedTrackList?, progress: ([Track]) -> Void) async -> LikedResult? {
+        let path = "me/tracks"
+        let first: Page<SavedTrack>? = try? await api.get(path, query: ["limit": "50", "offset": "0"])
+        guard let first else { return nil }
+        var tracks = first.items.map(\.track)
+        let stamp = "\(first.total ?? 0)|\(tracks.first?.uri ?? "")"
+        if let known, known.stamp == stamp {
+            return LikedResult(tracks: known.tracks, stamp: stamp, fromCache: true)
+        }
+        progress(tracks)
+        let finished = await PagedLoader.loadRemaining(api: api, path: path, first: first) {
+            tracks += $0.map(\.track)
+            progress(tracks)
+        }
+        return finished ? LikedResult(tracks: tracks, stamp: stamp, fromCache: false) : nil
     }
 }
 

@@ -97,6 +97,9 @@ struct SettingsView: View {
                 SettingsRow(title: "Playback", symbol: "play.circle.fill", color: .pink, value: settings.preferredDeviceName ?? "Automatic") {
                     PlaybackSettings()
                 }
+                SettingsRow(title: "Cache", symbol: "archivebox.fill", color: .teal) {
+                    CacheSettings()
+                }
             }
 
             Section {
@@ -316,18 +319,8 @@ struct StorageSettings: View {
     @State private var confirmReset = false
 
     var body: some View {
-        @Bindable var settings = settings
-        return Form {
+        Form {
             Section {
-                Toggle("Cache song lists", isOn: $settings.cacheLists)
-                Toggle("Cache images", isOn: $settings.cacheImages)
-            }
-            Section {
-                Button("Clear song list cache") { TrackListCache.clear() }
-                Button("Clear image cache") {
-                    URLCache.shared.removeAllCachedResponses()
-                    Task { await ImageCache.shared.clear() }
-                }
                 Button("Clear download marks", role: .destructive) { confirmClearMarks = true }
                 Button("Clear pins", role: .destructive) { confirmClearPins = true }
             }

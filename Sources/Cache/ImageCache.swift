@@ -7,7 +7,10 @@ actor ImageCache {
 
     nonisolated(unsafe) private let memory = NSCache<NSURL, UIImage>()
     private let directory: URL
-    private let limitBytes = 300 * 1024 * 1024
+    private var limitBytes: Int {
+        let megabytes = UserDefaults.standard.integer(forKey: "settings.imageCacheLimitMB")
+        return (megabytes > 0 ? megabytes : 300) * 1024 * 1024
+    }
     private var inFlight: [URL: Task<UIImage?, Never>] = [:]
     private var writes = 0
 
@@ -43,6 +46,15 @@ actor ImageCache {
                 group.addTask(priority: .utility) { await self.warm(url) }
             }
         }
+    }
+
+    func stats() async -> (count: Int, bytes: Int) {
+        let folder = directory
+        return await Task.detached(priority: .utility) { directoryStats(folder) }.value
+    }
+
+    func trimNow() {
+        trim()
     }
 
     func clear() {
@@ -124,10 +136,10 @@ actor ImageCache {
 }
 
 extension ImageCache {
-    func prefetchArtwork(of tracks: [Track]) async {
+    func prefetchArtwork(of tracks: [Track], limit: Int = 600) async {
         var seen = Set<URL>()
         let urls = tracks.compactMap { $0.album?.images.url(atLeast: 100) }.filter { seen.insert($0).inserted }
-        await prefetch(Array(urls.prefix(600)))
+        await prefetch(Array(urls.prefix(limit)))
     }
 }
 

@@ -97,7 +97,6 @@ struct PlaylistDetailView: View {
             return
         }
         guard canList, !isComplete else { return }
-        let path = "playlists/\(playlist.id)/items"
         if settings.cacheLists, let snapshot = playlist.snapshotId,
            let cached = await TrackListCache.load(key: playlist.id), cached.stamp == snapshot {
             tracks = cached.tracks
@@ -106,22 +105,16 @@ struct PlaylistDetailView: View {
             return
         }
         tracks = []
-        let first: Page<PlaylistItem>? = try? await library.api.get(path, query: ["limit": "50", "offset": "0"])
-        guard let first else { return }
-        tracks = first.items.compactMap(\.resolved)
-        let finished = await PagedLoader.loadRemaining(api: library.api, path: path, first: first) {
-            tracks += $0.compactMap(\.resolved)
-        }
-        guard finished else { return }
+        guard let result = await TrackListLoader.playlist(api: library.api, id: playlist.id, progress: { tracks = $0 }) else { return }
         isComplete = true
         if settings.cacheLists, let snapshot = playlist.snapshotId {
-            await TrackListCache.save(key: playlist.id, stamp: snapshot, tracks: tracks)
+            await TrackListCache.save(key: playlist.id, stamp: snapshot, tracks: result)
         }
         await prefetchImages()
     }
 
     private func prefetchImages() async {
-        guard settings.cacheImages else { return }
+        guard settings.prefetchesImages else { return }
         await ImageCache.shared.prefetchArtwork(of: tracks)
     }
 }
@@ -280,33 +273,19 @@ struct LikedSongsView: View {
             return
         }
         guard !isComplete else { return }
-        let path = "me/tracks"
         let cached = settings.cacheLists ? await TrackListCache.load(key: Self.contextKey) : nil
         if let cached, tracks.isEmpty { tracks = cached.tracks }
-        let first: Page<SavedTrack>? = try? await library.api.get(path, query: ["limit": "50", "offset": "0"])
-        guard let first else { return }
-        let firstTracks = first.items.map(\.track)
-        let stamp = "\(first.total ?? 0)|\(firstTracks.first?.uri ?? "")"
-        if let cached, cached.stamp == stamp {
-            tracks = cached.tracks
-            isComplete = true
-            await prefetchImages()
-            return
-        }
-        tracks = firstTracks
-        let finished = await PagedLoader.loadRemaining(api: library.api, path: path, first: first) {
-            tracks += $0.map(\.track)
-        }
-        guard finished else { return }
+        guard let result = await TrackListLoader.liked(api: library.api, known: cached, progress: { tracks = $0 }) else { return }
+        tracks = result.tracks
         isComplete = true
-        if settings.cacheLists {
-            await TrackListCache.save(key: Self.contextKey, stamp: stamp, tracks: tracks)
+        if settings.cacheLists, !result.fromCache {
+            await TrackListCache.save(key: Self.contextKey, stamp: result.stamp, tracks: result.tracks)
         }
         await prefetchImages()
     }
 
     private func prefetchImages() async {
-        guard settings.cacheImages else { return }
+        guard settings.prefetchesImages else { return }
         await ImageCache.shared.prefetchArtwork(of: tracks)
     }
 }

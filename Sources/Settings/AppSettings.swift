@@ -161,6 +161,14 @@ final class AppSettings {
         didSet { Self.defaults.set(cacheImages, forKey: "settings.cacheImages") }
     }
 
+    var preloadImages: Bool {
+        didSet { Self.defaults.set(preloadImages, forKey: "settings.preloadImages") }
+    }
+
+    var imageCacheLimitMB: Int {
+        didSet { Self.defaults.set(imageCacheLimitMB, forKey: "settings.imageCacheLimitMB") }
+    }
+
     var preferredDeviceID: String? {
         didSet { Self.defaults.set(preferredDeviceID, forKey: "settings.preferredDeviceID") }
     }
@@ -188,11 +196,15 @@ final class AppSettings {
         previousRestartSeconds = defaults.object(forKey: "settings.previousRestartSeconds") as? Int ?? 3
         cacheLists = defaults.object(forKey: "settings.cacheLists") as? Bool ?? true
         cacheImages = defaults.object(forKey: "settings.cacheImages") as? Bool ?? true
+        preloadImages = defaults.object(forKey: "settings.preloadImages") as? Bool ?? true
+        imageCacheLimitMB = defaults.object(forKey: "settings.imageCacheLimitMB") as? Int ?? 300
         preferredDeviceID = defaults.string(forKey: "settings.preferredDeviceID")
         preferredDeviceName = defaults.string(forKey: "settings.preferredDeviceName")
     }
 
     var accent: Color { Color(hex: accentHex) }
+
+    var prefetchesImages: Bool { cacheImages && preloadImages }
 
     var onAccent: Color { accent.isLight ? .black : .white }
 
@@ -214,6 +226,8 @@ final class AppSettings {
         previousRestartSeconds = 3
         cacheLists = true
         cacheImages = true
+        preloadImages = true
+        imageCacheLimitMB = 300
         preferredDeviceID = nil
         preferredDeviceName = nil
     }

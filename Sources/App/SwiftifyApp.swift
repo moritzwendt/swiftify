@@ -9,6 +9,7 @@ struct SwiftifyApp: App {
     @State private var player: PlayerManager
     @State private var queue: QueueStore
     @State private var lyrics: LyricsStore
+    @State private var warmer = CacheWarmer()
 
     init() {
         let auth = AuthManager()
@@ -39,6 +40,7 @@ struct SwiftifyApp: App {
                 .environment(lyrics)
                 .environment(settings)
                 .environment(chrome)
+                .environment(warmer)
                 .tint(settings.accent)
                 .preferredColorScheme(settings.appearance.colorScheme)
                 .onChange(of: auth.isAuthenticated) { _, signedIn in
@@ -47,6 +49,7 @@ struct SwiftifyApp: App {
                         player.reset()
                         queue.reset()
                         lyrics.reset()
+                        warmer.cancel()
                         TrackListCache.clear()
                         Task { await ImageCache.shared.clear() }
                     }
