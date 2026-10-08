@@ -127,6 +127,7 @@ struct FullPlayerView: View {
     @Environment(PlayerManager.self) private var player
     @Environment(AppSettings.self) private var settings
     @Environment(LibraryStore.self) private var library
+    @Environment(\.dismiss) private var dismiss
     @State private var tint: Color = .gray
     @State private var showSave = false
     @State private var savedWhenOpened = false
@@ -227,6 +228,16 @@ struct FullPlayerView: View {
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    let vertical = value.translation.height
+                    if vertical > 90, abs(value.translation.width) < vertical * 0.5 {
+                        dismiss()
+                    }
+                }
+        )
         .sheet(isPresented: $showSave) {
             if let track = player.track {
                 SaveToSheet(track: track, fromPlus: !savedWhenOpened)
