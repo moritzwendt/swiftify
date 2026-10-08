@@ -4,28 +4,55 @@ import Observation
 @MainActor
 @Observable
 final class MembershipStore {
+    private struct Entry: Codable {
+        var snapshot: String
+        var uris: [String]
+    }
+
     private(set) var tracks: [String: Set<String>] = [:]
     private(set) var scanning: Set<String> = []
     private(set) var skipped: Set<String> = []
     @ObservationIgnored private var snapshots: [String: String] = [:]
     @ObservationIgnored private let api: SpotifyAPI
+    @ObservationIgnored private var runningScan: Task<Void, Never>?
+    @ObservationIgnored private var failureCount = 0
     @ObservationIgnored var isSample = false
 
     private static let maxTrackCount = 1000
+    private static let pageDelay: Duration = .milliseconds(250)
+
+    private static var fileURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appending(path: "membership.json")
+    }
 
     init(api: SpotifyAPI) {
         self.api = api
+        if let data = try? Data(contentsOf: Self.fileURL),
+           let stored = try? JSONDecoder().decode([String: Entry].self, from: data) {
+            for (id, entry) in stored {
+                tracks[id] = Set(entry.uris)
+                snapshots[id] = entry.snapshot
+            }
+        }
     }
 
     func contains(_ playlistID: String, uri: String) -> Bool? {
         tracks[playlistID]?.contains(uri)
     }
 
+    func isInAny(_ uri: String) -> Bool {
+        tracks.values.contains { $0.contains(uri) }
+    }
+
     func reset() {
+        runningScan?.cancel()
+        runningScan = nil
         tracks = [:]
         snapshots = [:]
         scanning = []
         skipped = []
+        try? FileManager.default.removeItem(at: Self.fileURL)
     }
 
     func loadSample(_ values: [String: Set<String>]) {
@@ -35,22 +62,15 @@ final class MembershipStore {
 
     func scan(_ playlists: [Playlist]) async {
         if isSample { return }
+        if let running = runningScan { await running.value }
         let pending = playlists.filter(needsScan)
         guard !pending.isEmpty else { return }
-        await withTaskGroup(of: Void.self) { group in
-            var iterator = pending.makeIterator()
-            for _ in 0..<2 {
-                if let playlist = iterator.next() {
-                    group.addTask { await self.scanOne(playlist) }
-                }
-            }
-            while await group.next() != nil {
-                if Task.isCancelled { group.cancelAll(); break }
-                if let playlist = iterator.next() {
-                    group.addTask { await self.scanOne(playlist) }
-                }
-            }
-        }
+        failureCount = 0
+        let task = Task { await runScan(pending) }
+        runningScan = task
+        await task.value
+        runningScan = nil
+        persist()
     }
 
     func record(playlistID: String, uri: String, added: Bool, snapshot: String?) {
@@ -58,6 +78,14 @@ final class MembershipStore {
         if added { set.insert(uri) } else { set.remove(uri) }
         tracks[playlistID] = set
         if let snapshot { snapshots[playlistID] = snapshot }
+        persist()
+    }
+
+    private func runScan(_ pending: [Playlist]) async {
+        for playlist in pending {
+            if Task.isCancelled || failureCount >= 3 { return }
+            await scanOne(playlist)
+        }
     }
 
     private func needsScan(_ playlist: Playlist) -> Bool {
@@ -86,12 +114,27 @@ final class MembershipStore {
                     "fields": "items(item(uri),track(uri)),next,total"
                 ]
             )
-            guard let page else { return }
+            guard let page else {
+                failureCount += 1
+                return
+            }
             found.formUnion(page.items.compactMap(\.uri))
             offset += 50
             if page.next == nil { break }
+            try? await Task.sleep(for: Self.pageDelay)
         }
         tracks[playlist.id] = found
         snapshots[playlist.id] = playlist.snapshotId ?? ""
+        try? await Task.sleep(for: Self.pageDelay)
+    }
+
+    private func persist() {
+        var stored: [String: Entry] = [:]
+        for (id, set) in tracks {
+            stored[id] = Entry(snapshot: snapshots[id] ?? "", uris: Array(set))
+        }
+        if let data = try? JSONEncoder().encode(stored) {
+            try? data.write(to: Self.fileURL, options: .atomic)
+        }
     }
 }

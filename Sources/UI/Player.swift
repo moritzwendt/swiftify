@@ -126,8 +126,15 @@ struct ScrubberView: View {
 struct FullPlayerView: View {
     @Environment(PlayerManager.self) private var player
     @Environment(AppSettings.self) private var settings
+    @Environment(LibraryStore.self) private var library
     @State private var tint: Color = .gray
     @State private var showSave = false
+    @State private var savedWhenOpened = false
+
+    private var isSaved: Bool {
+        guard let uri = player.track?.uri else { return false }
+        return player.isLiked || library.membership.isInAny(uri)
+    }
 
     var body: some View {
         ZStack {
@@ -166,11 +173,12 @@ struct FullPlayerView: View {
                         }
                         Spacer(minLength: 0)
                         Button {
+                            savedWhenOpened = isSaved
                             showSave = true
                         } label: {
-                            Image(systemName: player.isLiked ? "checkmark" : "plus")
+                            Image(systemName: isSaved ? "checkmark" : "plus")
                                 .font(.title3.weight(.semibold))
-                                .foregroundStyle(player.isLiked ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
+                                .foregroundStyle(isSaved ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
                                 .contentTransition(.symbolEffect(.replace))
                                 .frame(width: 30, height: 30)
                         }
@@ -221,7 +229,7 @@ struct FullPlayerView: View {
         .environment(\.colorScheme, .dark)
         .sheet(isPresented: $showSave) {
             if let track = player.track {
-                SaveToSheet(track: track, autoLike: !player.isLiked)
+                SaveToSheet(track: track, fromPlus: !savedWhenOpened)
             }
         }
         .haptic(.impact, trigger: player.isPlaying)

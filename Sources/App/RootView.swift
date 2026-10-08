@@ -88,6 +88,7 @@ struct MainTabView: View {
         .task {
             await library.load()
             player.startPolling()
+            await library.membership.scan(library.editablePlaylists)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {

@@ -14,6 +14,8 @@ final class LibraryStore {
     private(set) var downloaded: Set<String>
     private(set) var recentOrder: [String] = []
     private(set) var pinned: [String]
+    private(set) var usageCounts: [String: Int] = [:]
+    @ObservationIgnored private var saveCounts: [String: Int]
 
     @ObservationIgnored let api: SpotifyAPI
     @ObservationIgnored let membership: MembershipStore
@@ -21,12 +23,14 @@ final class LibraryStore {
 
     private static let downloadedKey = "downloadedMarks"
     private static let pinnedKey = "pinnedItems"
+    private static let saveCountsKey = "saveCounts"
 
     init(api: SpotifyAPI) {
         self.api = api
         membership = MembershipStore(api: api)
         downloaded = Set(UserDefaults.standard.stringArray(forKey: Self.downloadedKey) ?? [])
         pinned = UserDefaults.standard.stringArray(forKey: Self.pinnedKey) ?? []
+        saveCounts = UserDefaults.standard.dictionary(forKey: Self.saveCountsKey) as? [String: Int] ?? [:]
     }
 
     func load(force: Bool = false) async {
@@ -53,10 +57,19 @@ final class LibraryStore {
         albums = loadedAlbums
         artists = loadedArtists
         likedTotal = loadedLiked?.total ?? likedTotal
+        let contexts = (loadedHistory?.items ?? []).compactMap { $0.context?.uri }
         var seen = Set<String>()
-        recentOrder = (loadedHistory?.items ?? [])
-            .compactMap { $0.context?.uri }
-            .filter { seen.insert($0).inserted }
+        recentOrder = contexts.filter { seen.insert($0).inserted }
+        usageCounts = Dictionary(grouping: contexts, by: { $0 }).mapValues(\.count)
+    }
+
+    func usage(of uri: String) -> Int {
+        (usageCounts[uri] ?? 0) * 2 + (saveCounts[uri] ?? 0) * 3
+    }
+
+    func noteSave(_ uri: String) {
+        saveCounts[uri, default: 0] += 1
+        UserDefaults.standard.set(saveCounts, forKey: Self.saveCountsKey)
     }
 
     func noteRecent(_ uri: String) {

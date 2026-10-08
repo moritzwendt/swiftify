@@ -1,110 +1,160 @@
 import SwiftUI
 
 struct SaveToSheet: View {
+    private enum Row: Identifiable {
+        case liked
+        case playlist(Playlist)
+
+        var id: String {
+            switch self {
+            case .liked: "liked"
+            case .playlist(let playlist): playlist.id
+            }
+        }
+    }
+
     let track: Track
-    var autoLike = false
+    var fromPlus = false
 
     @Environment(LibraryStore.self) private var library
     @Environment(PlayerManager.self) private var player
-    @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
     @State private var liked: Bool?
+    @State private var rows: [Row] = []
+    @State private var ready = false
     @State private var pending: Set<String> = []
     @State private var errorMessage: String?
-    @State private var scanDone = false
 
     private var membership: MembershipStore { library.membership }
 
     var body: some View {
         NavigationStack {
-            List {
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .listRowSeparator(.hidden)
-                }
-
-                Button {
-                    Task { await toggleLiked() }
-                } label: {
-                    HStack(spacing: 12) {
-                        LikedArtwork()
-                            .frame(width: 48, height: 48)
-                        Text("Liked Songs")
-                        Spacer(minLength: 0)
-                        status(isOn: liked, isBusy: liked == nil || pending.contains("liked"), unknown: false, finished: true)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .listRowSeparator(.hidden)
-
-                ForEach(library.editablePlaylists) { playlist in
-                    Button {
-                        Task { await toggle(playlist) }
-                    } label: {
-                        HStack(spacing: 12) {
-                            ArtworkView(url: playlist.images.url(atLeast: 100), cornerRadius: 6)
-                                .frame(width: 48, height: 48)
-                            Text(playlist.name)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                            status(
-                                isOn: membership.contains(playlist.id, uri: track.uri),
-                                isBusy: membership.scanning.contains(playlist.id) || pending.contains(playlist.id),
-                                unknown: membership.skipped.contains(playlist.id)
-                            )
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .listRowSeparator(.hidden)
-                    .disabled(membership.scanning.contains(playlist.id))
+            Group {
+                if ready {
+                    list
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .listStyle(.plain)
             .navigationTitle("Save to")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .close) { dismiss() }
+                        .tint(.primary)
                 }
             }
             .haptic(.selection, trigger: liked)
             .task { await prepare() }
-            .task {
-                await membership.scan(library.editablePlaylists)
-                scanDone = true
-            }
         }
         .presentationDetents([.medium, .large])
     }
 
-    @ViewBuilder
-    private func status(isOn: Bool?, isBusy: Bool, unknown: Bool = false, finished: Bool = false) -> some View {
-        if isBusy || (isOn == nil && !unknown && !scanDone && !finished) {
-            ProgressView()
-        } else if isOn == true {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.title3)
-                .foregroundStyle(.tint)
-        } else {
-            Image(systemName: "circle")
-                .font(.title3)
-                .foregroundStyle(.secondary)
+    private var list: some View {
+        List {
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .listRowSeparator(.hidden)
+            }
+            ForEach(rows) { row in
+                switch row {
+                case .liked:
+                    Button {
+                        Task { await toggleLiked() }
+                    } label: {
+                        rowLabel(
+                            title: "Liked Songs",
+                            isOn: liked == true,
+                            isBusy: pending.contains("liked")
+                        ) {
+                            LikedArtwork()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .listRowSeparator(.hidden)
+                case .playlist(let playlist):
+                    Button {
+                        Task { await toggle(playlist) }
+                    } label: {
+                        rowLabel(
+                            title: playlist.name,
+                            isOn: membership.contains(playlist.id, uri: track.uri) == true,
+                            isBusy: pending.contains(playlist.id)
+                        ) {
+                            ArtworkView(url: playlist.images.url(atLeast: 100), cornerRadius: 6)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .listRowSeparator(.hidden)
+                }
+            }
         }
+        .listStyle(.plain)
+    }
+
+    private func rowLabel<Art: View>(
+        title: String,
+        isOn: Bool,
+        isBusy: Bool,
+        @ViewBuilder art: () -> Art
+    ) -> some View {
+        HStack(spacing: 12) {
+            art().frame(width: 48, height: 48)
+            Text(title)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if isBusy {
+                ProgressView()
+            } else if isOn {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+            } else {
+                Image(systemName: "circle")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     private func prepare() async {
         if library.isSample {
             liked = false
-            if autoLike { await toggleLiked() }
-            return
+        } else {
+            let result: [Bool]? = try? await library.api.get("me/library/contains", query: ["uris": track.uri])
+            liked = result?.first ?? false
         }
-        let result: [Bool]? = try? await library.api.get("me/library/contains", query: ["uris": track.uri])
-        liked = result?.first ?? false
-        if autoLike, liked == false { await toggleLiked() }
+        await membership.scan(library.editablePlaylists)
+        if fromPlus, liked == false, !membership.isInAny(track.uri) {
+            await toggleLiked()
+        }
+        rows = buildRows()
+        ready = true
+    }
+
+    private func buildRows() -> [Row] {
+        let editable = Array(library.editablePlaylists.enumerated())
+        func byUsage(_ items: [(offset: Int, element: Playlist)]) -> [Playlist] {
+            items
+                .sorted { lhs, rhs in
+                    let left = library.usage(of: lhs.element.uri)
+                    let right = library.usage(of: rhs.element.uri)
+                    return left == right ? lhs.offset < rhs.offset : left > right
+                }
+                .map(\.element)
+        }
+        let assigned = byUsage(editable.filter { membership.contains($0.element.id, uri: track.uri) == true })
+        let others = byUsage(editable.filter { membership.contains($0.element.id, uri: track.uri) != true })
+        var result: [Row] = []
+        if liked == true { result.append(.liked) }
+        result += assigned.map(Row.playlist)
+        if liked != true { result.append(.liked) }
+        result += others.map(Row.playlist)
+        return result
     }
 
     private func toggleLiked() async {
@@ -149,6 +199,7 @@ struct SaveToSheet: View {
                     "playlists/\(playlist.id)/items",
                     body: ["uris": [track.uri]]
                 )
+                library.noteSave(playlist.uri)
             }
             membership.record(playlistID: playlist.id, uri: track.uri, added: !isMember, snapshot: response.snapshotId)
             if let snapshot = response.snapshotId {
