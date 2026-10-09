@@ -134,6 +134,7 @@ struct FullPlayerView: View {
     @State private var showLyrics = false
     @State private var lyricsFrame = CGRect.zero
     @State private var savedWhenOpened = false
+    @Namespace private var artworkSpace
 
     private var isSaved: Bool {
         guard let uri = player.track?.uri else { return false }
@@ -150,58 +151,49 @@ struct FullPlayerView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                VStack(spacing: 20) {
-                    Capsule()
-                        .fill(.white.opacity(0.4))
-                        .frame(width: 40, height: 5)
-                        .padding(.top, 8)
+                Capsule()
+                    .fill(.white.opacity(0.4))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 8)
 
-                    Group {
-                        if showLyrics {
-                            LyricsView()
-                                .frame(maxHeight: .infinity)
-                                .onGeometryChange(for: CGRect.self) { proxy in
-                                    proxy.frame(in: .named("player"))
-                                } action: { frame in
-                                    lyricsFrame = frame
-                                }
-                        } else {
-                            ArtworkView(url: player.artworkURL(atLeast: 640), cornerRadius: 16)
-                                .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
-                                .scaleEffect(player.isPlaying ? 1 : 0.86)
-                                .animation(.spring(duration: 0.5, bounce: 0.3), value: player.isPlaying)
+                if showLyrics {
+                    compactHeader
+                        .padding(.top, 20)
+                        .transition(.opacity)
+                    LyricsView()
+                        .frame(maxHeight: .infinity)
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: .named("player"))
+                        } action: { frame in
+                            lyricsFrame = frame
                         }
-                    }
-                    .transition(.opacity)
+                        .transition(.opacity)
+                } else {
+                    ArtworkView(url: player.artworkURL(atLeast: 640), cornerRadius: 16)
+                        .matchedGeometryEffect(id: "artwork", in: artworkSpace)
+                        .shadow(color: .black.opacity(0.4), radius: 24, y: 12)
+                        .scaleEffect(player.isPlaying ? 1 : 0.86)
+                        .animation(.spring(duration: 0.5, bounce: 0.3), value: player.isPlaying)
+                        .padding(.top, 20)
+                    Spacer(minLength: 16)
                 }
 
-                Spacer(minLength: 16)
-
                 VStack(spacing: 22) {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(player.track?.name ?? "")
-                                .font(.title2.bold())
-                                .lineLimit(1)
-                            Text(player.track?.artistLine ?? "")
-                                .font(.title3)
-                                .foregroundStyle(.white.opacity(0.7))
-                                .lineLimit(1)
+                    if !showLyrics {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(player.track?.name ?? "")
+                                    .font(.title2.bold())
+                                    .lineLimit(1)
+                                Text(player.track?.artistLine ?? "")
+                                    .font(.title3)
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                            saveButton
                         }
-                        Spacer(minLength: 0)
-                        Button {
-                            savedWhenOpened = isSaved
-                            showSave = true
-                        } label: {
-                            Image(systemName: isSaved ? "checkmark.circle.fill" : "plus.circle")
-                                .font(.system(size: 28))
-                                .foregroundStyle(isSaved ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
-                                .contentTransition(.symbolEffect(.replace))
-                                .frame(width: 40, height: 40)
-                                .contentShape(Circle())
-                        }
-                        .accessibilityLabel("Save to")
-                        .buttonStyle(.plain)
+                        .transition(.opacity)
                     }
 
                     ScrubberView()
@@ -241,7 +233,7 @@ struct FullPlayerView: View {
                             .lineLimit(1)
                         Spacer(minLength: 0)
                         transportButton(showLyrics ? "quote.bubble.fill" : "quote.bubble", active: showLyrics, label: "Lyrics") {
-                            withAnimation(.easeInOut(duration: 0.25)) { showLyrics.toggle() }
+                            withAnimation(.spring(duration: 0.5, bounce: 0.12)) { showLyrics.toggle() }
                         }
                         transportButton("list.bullet", label: "Queue") {
                             showQueue = true
@@ -284,6 +276,42 @@ struct FullPlayerView: View {
             if let color = await ArtworkTint.color(for: url) {
                 withAnimation(.easeInOut(duration: 0.6)) { tint = color }
             }
+        }
+    }
+
+    private var saveButton: some View {
+        Button {
+            savedWhenOpened = isSaved
+            showSave = true
+        } label: {
+            Image(systemName: isSaved ? "checkmark.circle.fill" : "plus.circle")
+                .font(.system(size: 28))
+                .foregroundStyle(isSaved ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 40, height: 40)
+                .contentShape(Circle())
+        }
+        .accessibilityLabel("Save to")
+        .buttonStyle(.plain)
+    }
+
+    private var compactHeader: some View {
+        HStack(spacing: 14) {
+            ArtworkView(url: player.artworkURL(atLeast: 640), cornerRadius: 9)
+                .matchedGeometryEffect(id: "artwork", in: artworkSpace)
+                .frame(width: 60, height: 60)
+                .shadow(color: .black.opacity(0.3), radius: 8, y: 3)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(player.track?.name ?? "")
+                    .font(.system(size: 18, weight: .semibold))
+                    .lineLimit(1)
+                Text(player.track?.artistLine ?? "")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            saveButton
         }
     }
 

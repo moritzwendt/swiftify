@@ -11,14 +11,70 @@ enum Lyrics: Equatable {
     case plain(String)
     case instrumental
     case notFound
+}
 
-    static func index(of lines: [LyricLine], at seconds: Double) -> Int? {
+struct LyricRow: Identifiable, Equatable {
+    enum Kind: Equatable {
+        case line
+        case interlude
+    }
+
+    let id: Int
+    let kind: Kind
+    let start: Double
+    let end: Double
+    let text: String
+
+    var duration: Double { max(end - start, 0.001) }
+
+    var fillDuration: Double {
+        let natural = max(Double(text.count) * 0.15, 0.8)
+        return min(natural, max(duration * 0.9, 0.4))
+    }
+
+    private static let introThreshold = 5.0
+    private static let pauseThreshold = 4.0
+    private static let breakThreshold = 8.0
+
+    static func rows(from lines: [LyricLine], trackDuration: Double?) -> [LyricRow] {
+        guard let first = lines.first else { return [] }
+        var rows: [LyricRow] = []
+        func append(_ kind: Kind, _ start: Double, _ end: Double, _ text: String = "") {
+            rows.append(LyricRow(id: rows.count, kind: kind, start: start, end: end, text: text))
+        }
+        if first.time >= introThreshold {
+            append(.interlude, 0, first.time)
+        }
+        for (index, line) in lines.enumerated() {
+            let next = index + 1 < lines.count ? lines[index + 1].time : trackDuration
+            let end = max(next ?? line.time + 6, line.time)
+            if line.text.isEmpty {
+                if end - line.time >= pauseThreshold {
+                    append(.interlude, line.time, end)
+                }
+                continue
+            }
+            let sung = line.time + min(Double(line.text.count) * 0.11 + 1.2, 7)
+            if end - sung >= breakThreshold {
+                append(.line, line.time, sung, line.text)
+                append(.interlude, sung, end)
+            } else {
+                append(.line, line.time, end, line.text)
+            }
+        }
+        while rows.last?.kind == .interlude {
+            rows.removeLast()
+        }
+        return rows
+    }
+
+    static func index(of rows: [LyricRow], at seconds: Double) -> Int? {
         var low = 0
-        var high = lines.count - 1
+        var high = rows.count - 1
         var result: Int?
         while low <= high {
             let middle = (low + high) / 2
-            if lines[middle].time <= seconds {
+            if rows[middle].start <= seconds {
                 result = middle
                 low = middle + 1
             } else {
