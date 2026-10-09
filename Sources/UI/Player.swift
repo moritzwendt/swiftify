@@ -230,10 +230,10 @@ struct FullPlayerView: View {
                     HStack(spacing: 12) {
                         deviceButton
                         Spacer(minLength: 0)
-                        transportButton(showLyrics ? "quote.bubble.fill" : "quote.bubble", active: showLyrics, label: "Lyrics") {
+                        plainButton(showLyrics ? "quote.bubble.fill" : "quote.bubble", active: showLyrics, label: "Lyrics") {
                             withAnimation(.spring(duration: 0.5, bounce: 0.12)) { showLyrics.toggle() }
                         }
-                        transportButton("list.bullet", label: "Queue") {
+                        plainButton("list.bullet", label: "Queue") {
                             showQueue = true
                         }
                     }
@@ -341,6 +341,23 @@ struct FullPlayerView: View {
             Spacer(minLength: 0)
             saveButton
         }
+    }
+
+    private func plainButton(
+        _ symbol: String,
+        active: Bool = false,
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(active ? AnyShapeStyle(.tint) : AnyShapeStyle(.white))
+                .frame(width: 40, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     private func transportButton(
