@@ -96,6 +96,10 @@ final class QueueStore {
         }
     }
 
+    func shuffleSample() {
+        upcoming.shuffle()
+    }
+
     func clearMessage() {
         message = nil
     }

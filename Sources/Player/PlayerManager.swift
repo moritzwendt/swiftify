@@ -287,6 +287,24 @@ final class PlayerManager {
         }
     }
 
+    func reshuffle() async {
+        guard shuffle, !isSample else { return }
+        await enqueue { [self] in
+            errorMessage = nil
+            holdsShuffle = true
+            do {
+                try await api.perform("PUT", "me/player/shuffle", query: ["state": "false"])
+                try await Task.sleep(for: .milliseconds(500))
+                try await api.perform("PUT", "me/player/shuffle", query: ["state": "true"])
+            } catch {
+                errorMessage = error.localizedDescription
+                try? await api.perform("PUT", "me/player/shuffle", query: ["state": "true"])
+            }
+            holdsShuffle = false
+            await refreshState(after: 0.4)
+        }
+    }
+
     func cycleRepeat() async {
         let previous = repeatMode
         let target: String
