@@ -96,6 +96,14 @@ final class QueueStore {
         }
     }
 
+    func advance(by steps: Int) {
+        let count = min(steps, upcoming.count)
+        guard count > 0 else { return }
+        current = upcoming[count - 1]
+        upcoming.removeFirst(count)
+        queuedCount = max(queuedCount - count, 0)
+    }
+
     func shuffleSample() {
         upcoming.shuffle()
     }

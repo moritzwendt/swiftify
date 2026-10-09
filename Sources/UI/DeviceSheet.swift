@@ -49,6 +49,7 @@ struct DeviceSheet: View {
         }
         .presentationDetents([.fraction(0.72), .large])
         .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.resizes)
         .haptic(.selection, trigger: switchCount)
         .task {
             while !Task.isCancelled {

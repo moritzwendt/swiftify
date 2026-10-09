@@ -19,6 +19,7 @@ final class PlayerManager {
     private(set) var deviceName: String?
     private(set) var deviceID: String?
     private(set) var deviceType: String?
+    private(set) var isSkipping = false
     private(set) var deviceVolume: Int?
     private(set) var deviceSupportsVolume = false
     private(set) var devices: [SpotifyDevice] = []
@@ -247,6 +248,27 @@ final class PlayerManager {
             return
         }
         await command("POST", "me/player/next")
+    }
+
+    func skipAhead(to track: Track, steps: Int) async {
+        guard steps > 0 else { return }
+        errorMessage = nil
+        show(track)
+        if isSample { return }
+        expected = (track.uri, Date().addingTimeInterval(6 + Double(steps) * 0.6))
+        isSkipping = true
+        await enqueue { [self] in
+            for _ in 0..<steps {
+                do {
+                    try await api.perform("POST", "me/player/next")
+                } catch {
+                    errorMessage = error.localizedDescription
+                    break
+                }
+            }
+            await refreshState(after: 0.5)
+        }
+        isSkipping = false
     }
 
     func previous() async {

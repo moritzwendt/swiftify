@@ -34,27 +34,30 @@ struct QueueSheet: View {
                         QueueRow(track: track, isCurrent: true)
                     }
                     if queued.isEmpty {
-                        rows(following)
+                        rows(following, offset: 0)
                     } else {
                         sectionTitle("Next in queue")
-                        rows(queued)
+                        rows(queued, offset: 0)
                         if !following.isEmpty {
                             sectionTitle(followingTitle)
-                            rows(following)
+                            rows(following, offset: queued.count)
                         }
                     }
                 }
                 .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
-            .refreshable { await queue.refresh() }
             .overlay { placeholder }
             .overlay(alignment: .bottom) { reshuffleButton }
             controls
         }
         .presentationDetents([.fraction(0.68), .large])
         .presentationDragIndicator(.visible)
-        .task(id: player.track?.uri) { await queue.refresh() }
+        .presentationContentInteraction(.resizes)
+        .task(id: player.track?.uri) {
+            guard !player.isSkipping else { return }
+            await queue.refresh()
+        }
     }
 
     private var header: some View {
@@ -83,9 +86,19 @@ struct QueueSheet: View {
             .padding(.bottom, 6)
     }
 
-    private func rows(_ tracks: [Track]) -> some View {
-        ForEach(Array(tracks.enumerated()), id: \.offset) { _, track in
+    private func rows(_ tracks: [Track], offset: Int) -> some View {
+        ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
             QueueRow(track: track, isCurrent: false)
+                .contentShape(Rectangle())
+                .onTapGesture { skip(to: track, steps: offset + index + 1) }
+        }
+    }
+
+    private func skip(to track: Track, steps: Int) {
+        queue.advance(by: steps)
+        Task {
+            await player.skipAhead(to: track, steps: steps)
+            if !queue.isSample { await queue.refresh() }
         }
     }
 
