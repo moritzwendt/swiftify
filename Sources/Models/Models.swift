@@ -196,11 +196,33 @@ struct SearchResults: Decodable {
     let playlists: Page<Playlist>?
 }
 
-struct SpotifyDevice: Decodable, Identifiable {
+struct SpotifyDevice: Decodable, Identifiable, Equatable {
     let id: String?
     let name: String
     let type: String
     let isActive: Bool
+    let isRestricted: Bool?
+    let supportsVolume: Bool?
+    let volumePercent: Int?
+
+    var isUsable: Bool { id != nil && isRestricted != true }
+
+    var symbol: String { Self.symbol(for: type) }
+
+    static func symbol(for type: String?) -> String {
+        switch type {
+        case "Computer": "macbook"
+        case "Tablet": "ipad"
+        case "Smartphone": "iphone"
+        case "Speaker": "hifispeaker"
+        case "AVR": "hifispeaker.2"
+        case "TV", "STB", "CastVideo": "tv"
+        case "GameConsole": "gamecontroller"
+        case "Automobile": "car"
+        case "AudioDongle", "CastAudio": "airplayaudio"
+        default: "speaker.wave.2"
+        }
+    }
 }
 
 struct DevicesResponse: Decodable {

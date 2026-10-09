@@ -17,6 +17,13 @@ final class PlayerManager {
     private(set) var shuffle = false
     private(set) var repeatMode = "off"
     private(set) var deviceName: String?
+    private(set) var deviceID: String?
+    private(set) var deviceType: String?
+    private(set) var deviceVolume: Int?
+    private(set) var deviceSupportsVolume = false
+    private(set) var devices: [SpotifyDevice] = []
+    private(set) var devicesLoaded = false
+    private(set) var devicesFailed = false
     private(set) var isLiked = false
     private(set) var errorMessage: String?
     private(set) var contextURI: String?
@@ -39,6 +46,9 @@ final class PlayerManager {
     @ObservationIgnored private var loggedFirstState = false
     @ObservationIgnored private var expectedShuffle: (value: Bool, until: Date)?
     @ObservationIgnored private var expectedRepeat: (value: String, until: Date)?
+    @ObservationIgnored private var expectedDevice: (id: String, until: Date)?
+    @ObservationIgnored private var expectedVolume: (value: Int, until: Date)?
+    @ObservationIgnored private var volumeTask: Task<Void, Never>?
 
     init(api: SpotifyAPI, settings: AppSettings) {
         self.api = api
@@ -105,6 +115,14 @@ final class PlayerManager {
         stopPolling()
         track = nil
         isPlaying = false
+        deviceName = nil
+        deviceID = nil
+        deviceType = nil
+        deviceVolume = nil
+        deviceSupportsVolume = false
+        devices = []
+        devicesLoaded = false
+        devicesFailed = false
     }
 
     private func stepSample(_ delta: Int) {
@@ -115,7 +133,7 @@ final class PlayerManager {
         baseDate = Date()
     }
 
-    func loadSample(queue: [Track], positionMs: Double, context: String?) {
+    func loadSample(queue: [Track], positionMs: Double, context: String?, devices: [SpotifyDevice] = []) {
         sampleQueue = queue
         let track = queue[0]
         isSample = true
@@ -124,7 +142,14 @@ final class PlayerManager {
         isPlaying = true
         basePositionMs = positionMs
         baseDate = Date()
-        deviceName = "iPhone"
+        self.devices = devices
+        devicesLoaded = true
+        let current = devices.first(where: \.isActive)
+        deviceName = current?.name ?? "iPhone"
+        deviceID = current?.id
+        deviceType = current?.type
+        deviceVolume = current?.volumePercent ?? 60
+        deviceSupportsVolume = current.map { $0.supportsVolume ?? true } ?? false
     }
 
     func refreshState(after delay: Double = 0) async {
@@ -301,6 +326,88 @@ final class PlayerManager {
         return true
     }
 
+    private func holdsExpectedDevice(_ id: String?) -> Bool {
+        guard let expectedDevice else { return false }
+        if id == expectedDevice.id || Date() > expectedDevice.until {
+            self.expectedDevice = nil
+            return false
+        }
+        return true
+    }
+
+    func refreshDevices() async {
+        if isSample { return }
+        do {
+            let response: DevicesResponse = try await api.get("me/player/devices")
+            devices = response.devices
+            devicesFailed = false
+        } catch {
+            devicesFailed = true
+        }
+        devicesLoaded = true
+    }
+
+    private func holdsExpectedVolume(_ value: Int?) -> Bool {
+        guard let expectedVolume else { return false }
+        if value == expectedVolume.value || Date() > expectedVolume.until {
+            self.expectedVolume = nil
+            return false
+        }
+        return true
+    }
+
+    func setVolume(_ percent: Int) {
+        let value = min(max(percent, 0), 100)
+        deviceVolume = value
+        expectedVolume = (value, Date().addingTimeInterval(4))
+        if isSample { return }
+        volumeTask?.cancel()
+        volumeTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, let self else { return }
+            do {
+                try await api.perform("PUT", "me/player/volume", query: ["volume_percent": "\(value)"])
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    var isOnThisPhone: Bool {
+        guard deviceType == "Smartphone" else { return false }
+        if let id = deviceID, let local = devices.localDevice { return local.id == id }
+        return [UIDevice.current.name, UIDevice.current.model].contains(deviceName ?? "")
+    }
+
+    func transfer(to device: SpotifyDevice) async {
+        guard let id = device.id, id != deviceID else { return }
+        errorMessage = nil
+        let previous = (id: deviceID, name: deviceName, type: deviceType)
+        deviceID = id
+        deviceName = device.name
+        deviceType = device.type
+        deviceVolume = device.volumePercent
+        deviceSupportsVolume = device.supportsVolume ?? (device.volumePercent != nil)
+        if isSample { return }
+        expectedDevice = (id, Date().addingTimeInterval(6))
+        do {
+            try await api.perform("PUT", "me/player", body: ["device_ids": [id], "play": isPlaying])
+        } catch {
+            expectedDevice = nil
+            deviceID = previous.id
+            deviceName = previous.name
+            deviceType = previous.type
+            errorMessage = error.localizedDescription
+            return
+        }
+        if settings.preferredDeviceID != nil {
+            settings.preferredDeviceID = id
+            settings.preferredDeviceName = device.name
+        }
+        await refreshState(after: 0.8)
+        await refreshDevices()
+    }
+
     private func holdsExpectedRepeat(_ value: String) -> Bool {
         guard let expectedRepeat else { return false }
         if value == expectedRepeat.value || Date() > expectedRepeat.until {
@@ -345,7 +452,15 @@ final class PlayerManager {
         if !holdsShuffle, !holdsExpectedShuffle(incomingShuffle) { shuffle = incomingShuffle }
         let incomingRepeat = state.repeatState ?? "off"
         if !holdsExpectedRepeat(incomingRepeat) { repeatMode = incomingRepeat }
-        deviceName = state.device?.name
+        if !holdsExpectedDevice(state.device?.id) {
+            deviceName = state.device?.name
+            deviceID = state.device?.id
+            deviceType = state.device?.type
+            deviceSupportsVolume = state.device?.supportsVolume ?? (state.device?.volumePercent != nil)
+        }
+        if !holdsExpectedVolume(state.device?.volumePercent) {
+            deviceVolume = state.device?.volumePercent
+        }
         if !loggedFirstState {
             loggedFirstState = true
             BootLog.post("player", "\(isPlaying ? "playing" : "paused") \(track?.name ?? "nothing") on \(deviceName ?? "no device")")
@@ -495,4 +610,13 @@ final class PlayerManager {
     }
 
     private static let noDeviceMessage = "Open Spotify and play a song once"
+}
+
+
+extension Array where Element == SpotifyDevice {
+    var localDevice: SpotifyDevice? {
+        let phones = filter { $0.type == "Smartphone" }
+        let names = [UIDevice.current.name, UIDevice.current.model]
+        return phones.first { names.contains($0.name) } ?? (phones.count == 1 ? phones.first : nil)
+    }
 }

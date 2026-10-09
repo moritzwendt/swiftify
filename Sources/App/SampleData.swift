@@ -23,7 +23,8 @@ enum SampleData {
         }
         library.loadSample(me: me, playlists: playlists, albums: albums, artists: artists, likedTotal: 482)
         library.membership.loadSample(["p1": ["spotify:track:t1"]])
-        player.loadSample(queue: Array(tracks.prefix(3)), positionMs: 64000, context: "spotify:playlist:p0")
+        let devices: [SpotifyDevice] = decode(#"[{"id":"d1","is_active":true,"is_restricted":false,"name":"iPhone","type":"Smartphone","supports_volume":false},{"id":"d2","is_active":false,"is_restricted":false,"name":"MacBook Pro von Moritz","type":"Computer","supports_volume":true,"volume_percent":55},{"id":"d3","is_active":false,"is_restricted":false,"name":"Living Room","type":"Speaker","supports_volume":true,"volume_percent":30},{"id":"d4","is_active":false,"is_restricted":false,"name":"Samsung TV","type":"TV"},{"id":null,"is_active":false,"is_restricted":true,"name":"Kitchen Display","type":"CastVideo"}]"#)
+        player.loadSample(queue: Array(tracks.prefix(3)), positionMs: 64000, context: "spotify:playlist:p0", devices: devices)
         queue.loadSample(upcoming: Array(tracks.dropFirst(3).prefix(8)))
         lyrics.isSample = true
     }

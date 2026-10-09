@@ -39,6 +39,7 @@
 		AA3D0E0945D07788FFAB1E5D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448568EAAECAFD202065608F /* AppSettings.swift */; };
 		B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AB62131834C889BBB1EB2 /* AuthManager.swift */; };
 		BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5125EC825CC5FD3461D2E70A /* CacheSettings.swift */; };
+		C0062E1906DDF0EA1D255970 /* DeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7FFC64CB2A543BFB7A45AD /* DeviceSheet.swift */; };
 		D43019C252028289DC589E1D /* CreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63152471936FB65D84D134F /* CreateSheet.swift */; };
 		D47392733FBB19D85B3AC1BE /* DetailMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D45DCD69F6C11658BC8898 /* DetailMenu.swift */; };
 		D741C27E8280915C8714DEF9 /* LyricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */; };
@@ -69,6 +70,7 @@
 		70531C0CBEC205890DDF440A /* SpotifyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyConfig.swift; sourceTree = "<group>"; };
 		82BEDC5693E4D9400D8C7C04 /* LyricsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsClient.swift; sourceTree = "<group>"; };
 		859446FBB5BE60554ADBFCE7 /* QueueSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueSheet.swift; sourceTree = "<group>"; };
+		8A7FFC64CB2A543BFB7A45AD /* DeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSheet.swift; sourceTree = "<group>"; };
 		8D1729CDB20D08B523B2272A /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		8D9E47EC0CC750B9A6F48F2C /* PlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerManager.swift; sourceTree = "<group>"; };
 		8EBBAD4CA1D80BCF47C42430 /* Swiftify.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Swiftify.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -147,6 +149,7 @@
 				E63152471936FB65D84D134F /* CreateSheet.swift */,
 				11D45DCD69F6C11658BC8898 /* DetailMenu.swift */,
 				AF0AAB1F34BACA7B0F3F5353 /* DetailViews.swift */,
+				8A7FFC64CB2A543BFB7A45AD /* DeviceSheet.swift */,
 				32F798C91C8348DB06C3AFE5 /* HomeView.swift */,
 				ABC856203CAD985E07B8FD41 /* LibraryView.swift */,
 				E7AAA2D8023F2EB880E1B4F3 /* LyricRowView.swift */,
@@ -359,6 +362,7 @@
 				D43019C252028289DC589E1D /* CreateSheet.swift in Sources */,
 				D47392733FBB19D85B3AC1BE /* DetailMenu.swift in Sources */,
 				F38BDB36147DC11AA93DB29C /* DetailViews.swift in Sources */,
+				C0062E1906DDF0EA1D255970 /* DeviceSheet.swift in Sources */,
 				31AB5FD3EEA24DD2A06F75B8 /* HomeView.swift in Sources */,
 				0351494059BFD9CEA05B6CAD /* ImageCache.swift in Sources */,
 				3E8F805EACC3B885B8617EE5 /* LaunchCover.swift in Sources */,

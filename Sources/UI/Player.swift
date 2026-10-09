@@ -131,6 +131,7 @@ struct FullPlayerView: View {
     @State private var tint: Color = .gray
     @State private var showSave = false
     @State private var showQueue = false
+    @State private var showDevices = false
     @State private var showLyrics = false
     @State private var lyricsFrame = CGRect.zero
     @State private var savedWhenOpened = false
@@ -227,10 +228,7 @@ struct FullPlayerView: View {
                     }
 
                     HStack(spacing: 12) {
-                        Label(player.deviceName ?? "No device", systemImage: "airplayaudio")
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .lineLimit(1)
+                        deviceButton
                         Spacer(minLength: 0)
                         transportButton(showLyrics ? "quote.bubble.fill" : "quote.bubble", active: showLyrics, label: "Lyrics") {
                             withAnimation(.spring(duration: 0.5, bounce: 0.12)) { showLyrics.toggle() }
@@ -266,17 +264,47 @@ struct FullPlayerView: View {
         .sheet(isPresented: $showQueue) {
             QueueSheet()
         }
+        .sheet(isPresented: $showDevices) {
+            DeviceSheet()
+        }
         .haptic(.impact, trigger: player.isPlaying)
         .haptic(.selection, trigger: showLyrics)
         .haptic(.selection, trigger: player.shuffle)
         .haptic(.selection, trigger: player.repeatMode)
         .haptic(.success, trigger: player.isLiked)
+        .task { await player.refreshDevices() }
         .task(id: player.track?.uri) {
             guard settings.dynamicPlayerBackground, let url = player.artworkURL(atLeast: 100) else { return }
             if let color = await ArtworkTint.color(for: url) {
                 withAnimation(.easeInOut(duration: 0.6)) { tint = color }
             }
         }
+    }
+
+    private var deviceButton: some View {
+        Button {
+            showDevices = true
+        } label: {
+            Group {
+                if player.deviceName == nil || player.isOnThisPhone {
+                    ConnectGlyph()
+                        .frame(width: 26, height: 22)
+                        .foregroundStyle(.white)
+                } else {
+                    HStack(spacing: 10) {
+                        DeviceGlyph(type: player.deviceType, size: 20, underlined: true)
+                        Text(player.deviceName ?? "")
+                            .font(.system(size: 14))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.tint)
+                }
+            }
+            .frame(minHeight: 36)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Devices")
     }
 
     private var saveButton: some View {
