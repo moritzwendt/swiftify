@@ -138,38 +138,127 @@ struct CreateMenu: View {
     }
 }
 
-struct CreateMenuOverlay: ViewModifier {
-    @Binding var isPresented: Bool
-    let onSelect: (CreateDestination) -> Void
+@MainActor
+enum TabSnapshot {
+    static let probes = NSHashTable<UIView>.weakObjects()
+    static var latest: UIImage?
+    private static let observed = NSHashTable<UIWindow>.weakObjects()
 
-    func body(content: Content) -> some View {
-        content.overlay {
-            if isPresented {
-                ZStack(alignment: .bottom) {
-                    Color.black.opacity(0.45)
-                        .ignoresSafeArea()
-                        .onTapGesture { close() }
-                    CreateMenu(onSelect: onSelect, onOpenSpotify: {
-                        close()
-                        SpotifyApp.open()
-                    })
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-                    .transition(.scale(scale: 0.92, anchor: .bottom).combined(with: .opacity))
-                }
-                .transition(.opacity)
-            }
-        }
+    static func observe(_ window: UIWindow) {
+        guard !observed.contains(window) else { return }
+        observed.add(window)
+        let recognizer = UILongPressGestureRecognizer(target: TouchObserver.shared, action: #selector(TouchObserver.handle(_:)))
+        recognizer.minimumPressDuration = 0
+        recognizer.cancelsTouchesInView = false
+        recognizer.delaysTouchesBegan = false
+        recognizer.delaysTouchesEnded = false
+        recognizer.delegate = TouchObserver.shared
+        window.addGestureRecognizer(recognizer)
     }
 
-    private func close() {
-        withAnimation(.snappy) { isPresented = false }
+    static func refresh() {
+        guard let probe = probes.allObjects.first(where: { $0.window != nil }) else { return }
+        var target: UIViewController?
+        var responder: UIResponder? = probe
+        while let current = responder {
+            if let controller = current as? UIViewController, controller.parent is UITabBarController {
+                target = controller
+                break
+            }
+            responder = current.next
+        }
+        guard let view = target?.view, view.bounds.width > 0 else { return }
+        let renderer = UIGraphicsImageRenderer(bounds: view.bounds)
+        latest = renderer.image { _ in
+            view.drawHierarchy(in: view.bounds, afterScreenUpdates: false)
+        }
     }
 }
 
-extension View {
-    func createMenu(isPresented: Binding<Bool>, onSelect: @escaping (CreateDestination) -> Void) -> some View {
-        modifier(CreateMenuOverlay(isPresented: isPresented, onSelect: onSelect))
+@MainActor
+final class TouchObserver: NSObject, UIGestureRecognizerDelegate {
+    static let shared = TouchObserver()
+
+    @objc func handle(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began, let window = recognizer.view else { return }
+        if recognizer.location(in: window).y > window.bounds.height - 130 {
+            TabSnapshot.refresh()
+        }
+    }
+
+    nonisolated func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+}
+
+final class ProbeView: UIView {
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if let window { TabSnapshot.observe(window) }
+    }
+}
+
+struct TabProbe: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = ProbeView()
+        view.isUserInteractionEnabled = false
+        TabSnapshot.probes.add(view)
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {}
+}
+
+struct CreateTabContent: View {
+    let snapshot: UIImage?
+    let onClose: () -> Void
+    let onSelect: (CreateDestination) -> Void
+
+    @State private var shown = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onClose)
+            CreateMenu(
+                onSelect: onSelect,
+                onOpenSpotify: {
+                    onClose()
+                    SpotifyApp.open()
+                }
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
+            .scaleEffect(shown ? 1 : 0.92, anchor: .bottom)
+            .opacity(shown ? 1 : 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            GeometryReader { proxy in
+                let origin = proxy.frame(in: .global).origin
+                let size = snapshot?.size ?? CGSize(width: 1000, height: 2400)
+                ZStack {
+                    if let snapshot {
+                        Image(uiImage: snapshot)
+                            .resizable()
+                            .frame(width: size.width, height: size.height)
+                    } else {
+                        Color(uiColor: .systemBackground)
+                    }
+                    Color.black.opacity(shown ? 0.45 : 0)
+                }
+                .frame(width: size.width, height: size.height)
+                .offset(x: -origin.x, y: -origin.y)
+            }
+        }
+        .onAppear {
+            withAnimation(.snappy(duration: 0.28)) { shown = true }
+        }
+        .onDisappear { shown = false }
     }
 }
 

@@ -82,18 +82,19 @@ struct MainTabView: View {
     @Environment(ChromeState.self) private var chrome
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .home
-    @State private var showCreate = false
+    @State private var previousTab: AppTab = .home
+    @State private var createSnapshot: UIImage?
     @State private var createDestination: CreateDestination?
     @State private var showPlayer = false
     @Namespace private var playerSpace
 
     var body: some View {
         TabView(selection: tabSelection) {
-            Tab("Home", systemImage: "house.fill", value: AppTab.home) { HomeView().createMenu(isPresented: $showCreate, onSelect: choose) }
-            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) { SearchView().createMenu(isPresented: $showCreate, onSelect: choose) }
-            Tab("Your Library", systemImage: "books.vertical.fill", value: AppTab.library) { LibraryView().createMenu(isPresented: $showCreate, onSelect: choose) }
+            Tab("Home", systemImage: "house.fill", value: AppTab.home) { HomeView().background(TabProbe()) }
+            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) { SearchView().background(TabProbe()) }
+            Tab("Your Library", systemImage: "books.vertical.fill", value: AppTab.library) { LibraryView().background(TabProbe()) }
             Tab(value: AppTab.create) {
-                Color.clear
+                CreateTabContent(snapshot: createSnapshot, onClose: closeCreate, onSelect: choose)
             } label: {
                 createLabel
             }
@@ -134,23 +135,29 @@ struct MainTabView: View {
             get: { selection },
             set: { tab in
                 if tab == .create {
-                    if settings.createOpensSpotify {
+                    if selection == .create {
+                        closeCreate()
+                    } else if settings.createOpensSpotify {
                         SpotifyApp.open()
                     } else {
-                        withAnimation(.snappy) { showCreate.toggle() }
+                        previousTab = selection
+                        createSnapshot = TabSnapshot.latest
+                        selection = .create
                     }
                 } else {
                     selection = tab
-                    if showCreate {
-                        withAnimation(.snappy) { showCreate = false }
-                    }
                 }
             }
         )
     }
 
+    private func closeCreate() {
+        selection = previousTab
+        createSnapshot = nil
+    }
+
     private func choose(_ destination: CreateDestination) {
-        withAnimation(.snappy) { showCreate = false }
+        closeCreate()
         createDestination = destination
     }
 
@@ -163,7 +170,7 @@ struct MainTabView: View {
                 Image(uiImage: SpotifyGlyph.image)
             }
         } else {
-            Label("Create", systemImage: showCreate ? "xmark" : "plus")
+            Label("Create", systemImage: selection == .create ? "xmark" : "plus")
         }
     }
 
