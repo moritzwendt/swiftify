@@ -145,6 +145,14 @@ struct Playlist: Decodable, Hashable, Identifiable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
+extension Track {
+    func matches(_ needle: String) -> Bool {
+        name.localizedCaseInsensitiveContains(needle)
+            || artistLine.localizedCaseInsensitiveContains(needle)
+            || (album?.name.localizedCaseInsensitiveContains(needle) ?? false)
+    }
+}
+
 struct URIRef: Decodable {
     let uri: String?
 }

@@ -75,6 +75,33 @@ struct DetailHeader: View {
     }
 }
 
+private struct TrackSearch: ViewModifier {
+    @Binding var text: String
+    let enabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content.searchable(text: $text, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Find in playlist")
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    func trackSearch(text: Binding<String>, enabled: Bool = true) -> some View {
+        modifier(TrackSearch(text: text, enabled: enabled))
+    }
+}
+
+private func indexedTracks(_ tracks: [Track], matching query: String) -> [(offset: Int, element: Track)] {
+    let needle = query.trimmingCharacters(in: .whitespaces)
+    let all = Array(tracks.enumerated())
+    guard !needle.isEmpty else { return all }
+    return all.filter { $0.element.matches(needle) }
+}
+
 struct PlaylistDetailView: View {
     let playlist: Playlist
     @Environment(LibraryStore.self) private var library
@@ -88,12 +115,15 @@ struct PlaylistDetailView: View {
     @State private var destination: MenuDestination?
     @State private var editMode: EditMode = .inactive
     @State private var serial = SerialTasks()
+    @State private var query = ""
     @State private var saves: Int?
 
     private var live: Playlist { library.playlists.first { $0.id == playlist.id } ?? playlist }
     private var canList: Bool { library.canListTracks(of: live) }
     private var isOwned: Bool { library.me != nil && live.owner?.id == library.me?.id }
     private var isEditing: Bool { editMode == .active }
+    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var visibleTracks: [(offset: Int, element: Track)] { indexedTracks(tracks, matching: query) }
 
     private var trailingAction: HeaderAction {
         if isOwned {
@@ -136,7 +166,7 @@ struct PlaylistDetailView: View {
             .detailRow(top: 0)
 
             if canList {
-                ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
+                ForEach(visibleTracks, id: \.offset) { index, track in
                     Button {
                         guard !isEditing else { return }
                         Task { await player.play(context: live.uri, offset: track.uri, showing: track) }
@@ -146,11 +176,16 @@ struct PlaylistDetailView: View {
                     .buttonStyle(.plain)
                     .trackActions(track)
                     .detailRow()
-                    .moveDisabled(!isEditing)
-                    .deleteDisabled(!isEditing)
+                    .moveDisabled(!isEditing || isSearching)
+                    .deleteDisabled(!isEditing || isSearching)
                 }
                 .onMove(perform: move)
                 .onDelete(perform: remove)
+
+                if isSearching && visibleTracks.isEmpty {
+                    ContentUnavailableView.search(text: query)
+                        .detailRow(top: 24)
+                }
             } else {
                 Text("The track list is not available for playlists you do not own")
                     .font(.footnote)
@@ -163,6 +198,7 @@ struct PlaylistDetailView: View {
         .environment(\.defaultMinListRowHeight, 0)
         .environment(\.editMode, $editMode)
         .navigationBarTitleDisplayMode(.inline)
+        .trackSearch(text: $query, enabled: canList)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if isEditing {
@@ -215,7 +251,7 @@ struct PlaylistDetailView: View {
     }
 
     private func move(from source: IndexSet, to destination: Int) {
-        guard let from = source.first else { return }
+        guard !isSearching, let from = source.first else { return }
         let previous = tracks
         tracks.move(fromOffsets: source, toOffset: destination)
         let id = live.id
@@ -236,6 +272,7 @@ struct PlaylistDetailView: View {
     }
 
     private func remove(at offsets: IndexSet) {
+        guard !isSearching else { return }
         let uris = Set(offsets.map { tracks[$0].uri })
         let previous = tracks
         tracks.removeAll { uris.contains($0.uri) }
@@ -448,7 +485,10 @@ struct LikedSongsView: View {
     @State private var showMenu = false
     @State private var pendingDestination: MenuDestination?
     @State private var destination: MenuDestination?
+    @State private var query = ""
 
+    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var visibleTracks: [(offset: Int, element: Track)] { indexedTracks(tracks, matching: query) }
 
     var body: some View {
         List {
@@ -466,7 +506,7 @@ struct LikedSongsView: View {
             }
             .detailRow(top: 0)
 
-            ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
+            ForEach(visibleTracks, id: \.offset) { index, track in
                 Button {
                     Task { await player.play(uris: tracks.map(\.uri), startAt: index, key: Self.contextKey, showing: track) }
                 } label: {
@@ -476,10 +516,16 @@ struct LikedSongsView: View {
                 .trackActions(track)
                 .detailRow()
             }
+
+            if isSearching && visibleTracks.isEmpty {
+                ContentUnavailableView.search(text: query)
+                    .detailRow(top: 24)
+            }
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
+        .trackSearch(text: $query)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
