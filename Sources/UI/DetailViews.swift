@@ -101,19 +101,6 @@ private extension View {
     }
 }
 
-private struct SearchButton: View {
-    @Binding var isActive: Bool
-
-    var body: some View {
-        Button {
-            isActive = true
-        } label: {
-            Image(systemName: "magnifyingglass")
-        }
-        .accessibilityLabel("Find in playlist")
-    }
-}
-
 private func indexedTracks(_ tracks: [Track], matching query: String) -> [(offset: Int, element: Track)] {
     let needle = query.trimmingCharacters(in: .whitespaces)
     let all = Array(tracks.enumerated())
@@ -220,15 +207,12 @@ struct PlaylistDetailView: View {
         .environment(\.defaultMinListRowHeight, 0)
         .environment(\.editMode, $editMode)
         .navigationBarTitleDisplayMode(.inline)
-        .trackSearch(text: $query, isActive: $isSearching, enabled: canList && isSearching)
+        .trackSearch(text: $query, isActive: $isSearching, enabled: canList)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 if isEditing {
                     Button("Done") { editMode = .inactive }
                 } else {
-                    if canList {
-                        SearchButton(isActive: $isSearching)
-                    }
                     Button {
                         showMenu = true
                     } label: {
@@ -553,10 +537,9 @@ struct LikedSongsView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
-        .trackSearch(text: $query, isActive: $isSearching, enabled: isSearching)
+        .trackSearch(text: $query, isActive: $isSearching)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                SearchButton(isActive: $isSearching)
+            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showMenu = true
                 } label: {
