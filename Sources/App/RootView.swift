@@ -85,6 +85,7 @@ struct MainTabView: View {
     @State private var previousTab: AppTab = .home
     @State private var createSnapshot: UIImage?
     @State private var createDestination: CreateDestination?
+    @State private var createClosing = false
     @State private var showPlayer = false
     @Namespace private var playerSpace
 
@@ -94,7 +95,12 @@ struct MainTabView: View {
             Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) { SearchView().background(TabProbe()) }
             Tab("Your Library", systemImage: "books.vertical.fill", value: AppTab.library) { LibraryView().background(TabProbe()) }
             Tab(value: AppTab.create) {
-                CreateTabContent(snapshot: createSnapshot, onClose: closeCreate, onSelect: choose)
+                CreateTabContent(
+                    snapshot: createSnapshot,
+                    isMenuVisible: createDestination == nil && !createClosing,
+                    onClose: closeCreate,
+                    onSelect: choose
+                )
             } label: {
                 createLabel
             }
@@ -103,7 +109,10 @@ struct MainTabView: View {
         .tabViewBottomAccessory(isEnabled: player.track != nil) {
             MiniPlayer(namespace: playerSpace) { showPlayer = true }
         }
-        .sheet(item: $createDestination) { CreateDestinationSheet(destination: $0) }
+        .sheet(item: $createDestination, onDismiss: finishCreate) { CreateDestinationSheet(destination: $0) }
+        .onChange(of: settings.createOpensSpotify, initial: true) { _, opensSpotify in
+            TabSnapshot.isEnabled = !opensSpotify
+        }
         .sheet(isPresented: Binding(get: { chrome.showsSettings }, set: { chrome.showsSettings = $0 })) {
             NavigationStack { SettingsView() }
         }
@@ -145,6 +154,7 @@ struct MainTabView: View {
                         selection = .create
                     }
                 } else {
+                    createClosing = false
                     selection = tab
                 }
             }
@@ -152,12 +162,22 @@ struct MainTabView: View {
     }
 
     private func closeCreate() {
+        guard selection == .create, !createClosing else { return }
+        createClosing = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
+            finishCreate()
+        }
+    }
+
+    private func finishCreate() {
+        createClosing = false
+        guard selection == .create else { return }
         selection = previousTab
         createSnapshot = nil
     }
 
     private func choose(_ destination: CreateDestination) {
-        closeCreate()
         createDestination = destination
     }
 

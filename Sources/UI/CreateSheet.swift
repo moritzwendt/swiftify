@@ -117,6 +117,7 @@ struct CreateMenu: View {
 enum TabSnapshot {
     static let probes = NSHashTable<UIView>.weakObjects()
     static var latest: UIImage?
+    static var isEnabled = true
     private static let observed = NSHashTable<UIWindow>.weakObjects()
 
     static func observe(_ window: UIWindow) {
@@ -155,8 +156,9 @@ final class TouchObserver: NSObject, UIGestureRecognizerDelegate {
     static let shared = TouchObserver()
 
     @objc func handle(_ recognizer: UILongPressGestureRecognizer) {
-        guard recognizer.state == .began, let window = recognizer.view else { return }
-        if recognizer.location(in: window).y > window.bounds.height - 130 {
+        guard TabSnapshot.isEnabled, recognizer.state == .began, let window = recognizer.view else { return }
+        let point = recognizer.location(in: window)
+        if point.y > window.bounds.height - 130, point.x > window.bounds.width * 0.6 {
             TabSnapshot.refresh()
         }
     }
@@ -189,10 +191,13 @@ struct TabProbe: UIViewRepresentable {
 
 struct CreateTabContent: View {
     let snapshot: UIImage?
+    let isMenuVisible: Bool
     let onClose: () -> Void
     let onSelect: (CreateDestination) -> Void
 
-    @State private var shown = false
+    @State private var appeared = false
+
+    private var isShown: Bool { appeared && isMenuVisible }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -208,8 +213,9 @@ struct CreateTabContent: View {
             )
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
-            .scaleEffect(shown ? 1 : 0.92, anchor: .bottom)
-            .opacity(shown ? 1 : 0)
+            .scaleEffect(isShown ? 1 : 0.94, anchor: .bottom)
+            .opacity(isShown ? 1 : 0)
+            .allowsHitTesting(isShown)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
@@ -224,16 +230,15 @@ struct CreateTabContent: View {
                     } else {
                         Color(uiColor: .systemBackground)
                     }
-                    Color.black.opacity(shown ? 0.45 : 0)
+                    Color.black.opacity(isShown ? 0.45 : 0)
                 }
                 .frame(width: size.width, height: size.height)
                 .offset(x: -origin.x, y: -origin.y)
             }
         }
-        .onAppear {
-            withAnimation(.snappy(duration: 0.28)) { shown = true }
-        }
-        .onDisappear { shown = false }
+        .animation(.easeOut(duration: 0.2), value: isShown)
+        .onAppear { appeared = true }
+        .onDisappear { appeared = false }
     }
 }
 
