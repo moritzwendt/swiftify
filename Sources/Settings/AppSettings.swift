@@ -117,6 +117,10 @@ final class AppSettings {
         didSet { Self.defaults.set(haptics, forKey: "settings.haptics") }
     }
 
+    var createOpensSpotify: Bool {
+        didSet { Self.defaults.set(createOpensSpotify, forKey: "settings.createOpensSpotify") }
+    }
+
     var showSmartPlaylists: Bool {
         didSet { Self.defaults.set(showSmartPlaylists, forKey: "settings.showSmartPlaylists") }
     }
@@ -197,6 +201,7 @@ final class AppSettings {
         squareArtwork = defaults.object(forKey: "settings.squareArtwork") as? Bool ?? false
         tabBarMinimizes = defaults.object(forKey: "settings.tabBarMinimizes") as? Bool ?? true
         haptics = defaults.object(forKey: "settings.haptics") as? Bool ?? true
+        createOpensSpotify = defaults.object(forKey: "settings.createOpensSpotify") as? Bool ?? false
         showSmartPlaylists = defaults.object(forKey: "settings.showSmartPlaylists") as? Bool ?? true
         showExplicitBadge = defaults.object(forKey: "settings.showExplicitBadge") as? Bool ?? true
         homeShowRecent = defaults.object(forKey: "settings.homeShowRecent") as? Bool ?? true
@@ -230,6 +235,7 @@ final class AppSettings {
         squareArtwork = false
         tabBarMinimizes = true
         haptics = true
+        createOpensSpotify = false
         showSmartPlaylists = true
         showExplicitBadge = true
         homeShowRecent = true

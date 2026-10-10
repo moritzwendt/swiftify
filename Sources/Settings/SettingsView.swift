@@ -222,6 +222,7 @@ struct AppearanceSettings: View {
                 Toggle("Dynamic player background", isOn: $settings.dynamicPlayerBackground)
                 Toggle("Square artwork", isOn: $settings.squareArtwork)
                 Toggle("Minimize tab bar on scroll", isOn: $settings.tabBarMinimizes)
+                Toggle("Create button opens Spotify", isOn: $settings.createOpensSpotify)
             }
         }
         .navigationTitle("Appearance")

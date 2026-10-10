@@ -134,7 +134,11 @@ struct MainTabView: View {
             get: { selection },
             set: { tab in
                 if tab == .create {
-                    withAnimation(.snappy) { showCreate.toggle() }
+                    if settings.createOpensSpotify {
+                        SpotifyApp.open()
+                    } else {
+                        withAnimation(.snappy) { showCreate.toggle() }
+                    }
                 } else {
                     selection = tab
                     if showCreate {
@@ -150,8 +154,17 @@ struct MainTabView: View {
         createDestination = destination
     }
 
+    @ViewBuilder
     private var createLabel: some View {
-        Label("Create", systemImage: showCreate ? "xmark" : "plus")
+        if settings.createOpensSpotify {
+            Label {
+                Text("Spotify")
+            } icon: {
+                Image(uiImage: SpotifyGlyph.image)
+            }
+        } else {
+            Label("Create", systemImage: showCreate ? "xmark" : "plus")
+        }
     }
 
     @ViewBuilder
