@@ -41,9 +41,17 @@ struct DetailHeader: View {
                     .multilineTextAlignment(.center)
             }
             HStack(spacing: 20) {
-                if let leading { sideButton(leading) }
+                if let leading {
+                    sideButton(leading)
+                } else if trailing != nil {
+                    Color.clear.frame(width: 44, height: 44)
+                }
                 PlayButton(isPlaying: isPlaying, action: onPlay)
-                if let trailing { sideButton(trailing) }
+                if let trailing {
+                    sideButton(trailing)
+                } else if leading != nil {
+                    Color.clear.frame(width: 44, height: 44)
+                }
             }
             .padding(.top, 4)
         }
@@ -437,6 +445,10 @@ struct LikedSongsView: View {
     @Environment(AppSettings.self) private var settings
     @State private var tracks: [Track] = []
     @State private var isComplete = false
+    @State private var showMenu = false
+    @State private var pendingDestination: MenuDestination?
+    @State private var destination: MenuDestination?
+
 
     var body: some View {
         List {
@@ -445,7 +457,10 @@ struct LikedSongsView: View {
                 liked: true,
                 title: "Liked Songs",
                 subtitle: "\(library.likedTotal) songs",
-                isPlaying: player.isPlaying(context: Self.contextKey)
+                isPlaying: player.isPlaying(context: Self.contextKey),
+                leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
+                    Task { await player.toggleShuffle() }
+                }
             ) {
                 Task { await player.playOrPause(uris: tracks.map(\.uri), key: Self.contextKey) }
             }
@@ -465,6 +480,25 @@ struct LikedSongsView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showMenu = true
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel("More")
+            }
+        }
+        .sheet(isPresented: $showMenu, onDismiss: {
+            destination = pendingDestination
+            pendingDestination = nil
+        }) {
+            LikedMenuSheet(tracks: tracks, total: library.likedTotal, onSelect: { pendingDestination = $0 })
+        }
+        .sheet(item: $destination) { destination in
+            MenuDestinationSheet(destination: destination, liked: true, tracks: tracks, onAdded: { _, _ in })
+        }
         .task { await load() }
     }
 

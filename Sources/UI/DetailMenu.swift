@@ -66,13 +66,20 @@ private struct MenuButton: View {
 
 private struct MenuHeader: View {
     let imageURL: URL?
+    var liked = false
     let title: String
     let subtitle: String
 
     var body: some View {
         HStack(spacing: 14) {
-            ArtworkView(url: imageURL, cornerRadius: 6)
-                .frame(width: 56, height: 56)
+            Group {
+                if liked {
+                    LikedArtwork(cornerRadius: 6)
+                } else {
+                    ArtworkView(url: imageURL, cornerRadius: 6)
+                }
+            }
+            .frame(width: 56, height: 56)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.headline)
@@ -111,6 +118,31 @@ private struct MenuContainer<Content: View>: View {
 struct FollowersBox: Decodable {
     struct Total: Decodable { let total: Int? }
     let followers: Total?
+}
+
+struct LikedMenuSheet: View {
+    let tracks: [Track]
+    let total: Int
+    let onSelect: (MenuDestination) -> Void
+
+    @Environment(QueueStore.self) private var queue
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        MenuContainer {
+            MenuHeader(imageURL: nil, liked: true, title: "Liked Songs", subtitle: "Playlist \u{2022} \(total) songs")
+
+            MenuButton(symbol: "text.line.last.and.arrowtriangle.forward", title: "Add to queue", enabled: !tracks.isEmpty) {
+                Task { await queue.add(tracks: tracks) }
+                dismiss()
+            }
+
+            MenuButton(symbol: "text.badge.plus", title: "Add to playlist", enabled: !tracks.isEmpty) {
+                onSelect(.addToPlaylist)
+                dismiss()
+            }
+        }
+    }
 }
 
 struct PlaylistMenuSheet: View {
@@ -308,6 +340,7 @@ struct MenuDestinationSheet: View {
     let destination: MenuDestination
     var playlist: Playlist?
     var album: Album?
+    var liked = false
     let tracks: [Track]
     let onAdded: (Track, String?) -> Void
 
@@ -332,8 +365,9 @@ struct MenuDestinationSheet: View {
             if let playlist { AddSongsView(playlist: playlist, onAdded: onAdded) }
         case .addToPlaylist:
             AddToPlaylistView(
-                title: playlist?.name ?? album?.name ?? "",
+                title: liked ? "Liked Songs" : playlist?.name ?? album?.name ?? "",
                 imageURL: (playlist?.images ?? album?.images).url(atLeast: 100),
+                liked: liked,
                 uris: tracks.map(\.uri),
                 excludingID: playlist?.id
             )
@@ -523,6 +557,7 @@ struct AddSongsView: View {
 struct AddToPlaylistView: View {
     let title: String
     let imageURL: URL?
+    var liked = false
     let uris: [String]
     var excludingID: String?
 
@@ -592,8 +627,14 @@ struct AddToPlaylistView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            ArtworkView(url: imageURL, cornerRadius: 6)
-                .frame(width: 44, height: 44)
+            Group {
+                if liked {
+                    LikedArtwork(cornerRadius: 6)
+                } else {
+                    ArtworkView(url: imageURL, cornerRadius: 6)
+                }
+            }
+            .frame(width: 44, height: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
