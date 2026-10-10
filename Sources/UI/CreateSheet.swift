@@ -32,33 +32,6 @@ enum SpotifyApp {
     }
 }
 
-enum SpotifyGlyph {
-    static let image: UIImage = {
-        let side: CGFloat = 26
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
-        let drawn = renderer.image { context in
-            let cg = context.cgContext
-            cg.scaleBy(x: side / 24, y: side / 24)
-            cg.setFillColor(UIColor.black.cgColor)
-            cg.fillEllipse(in: CGRect(x: 0, y: 0, width: 24, height: 24))
-            cg.setBlendMode(.clear)
-            cg.setLineCap(.round)
-            let bars: [(start: CGPoint, control: CGPoint, end: CGPoint, width: CGFloat)] = [
-                (CGPoint(x: 5.4, y: 9.4), CGPoint(x: 12, y: 5.6), CGPoint(x: 18.8, y: 10.4), 2.4),
-                (CGPoint(x: 6.4, y: 12.9), CGPoint(x: 12, y: 9.9), CGPoint(x: 17.8, y: 13.6), 2),
-                (CGPoint(x: 7.4, y: 16.1), CGPoint(x: 12, y: 13.7), CGPoint(x: 16.8, y: 16.7), 1.7)
-            ]
-            for bar in bars {
-                cg.setLineWidth(bar.width)
-                cg.move(to: bar.start)
-                cg.addQuadCurve(to: bar.end, control: bar.control)
-                cg.strokePath()
-            }
-        }
-        return drawn.withRenderingMode(.alwaysTemplate)
-    }()
-}
-
 enum CreateDestination: Identifiable, Hashable {
     case playlist
     case link
@@ -96,8 +69,10 @@ struct CreateMenu: View {
             Button(action: onOpenSpotify) {
                 row(title: "Open Spotify") {
                     ZStack {
-                        Circle().fill(.black)
-                        Image(uiImage: SpotifyGlyph.image)
+                        Circle()
+                            .fill(.black)
+                            .padding(2)
+                        Image("SpotifyLogo")
                             .resizable()
                             .scaledToFit()
                             .foregroundStyle(Color(hex: "1ED760"))

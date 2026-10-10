@@ -167,7 +167,7 @@ struct MainTabView: View {
             Label {
                 Text("Spotify")
             } icon: {
-                Image(uiImage: SpotifyGlyph.image)
+                Image("SpotifyLogo")
             }
         } else {
             Label("Create", systemImage: selection == .create ? "xmark" : "plus")
