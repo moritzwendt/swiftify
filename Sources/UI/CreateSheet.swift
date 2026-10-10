@@ -245,6 +245,7 @@ struct CreateTabContent: View {
 struct CreateDestinationSheet: View {
     let destination: CreateDestination
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSettings.self) private var settings
 
     var body: some View {
         NavigationStack {
@@ -256,7 +257,16 @@ struct CreateDestinationSheet: View {
                     }
                 }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .background {
+            LinearGradient(
+                colors: [settings.accent.opacity(0.28), .clear],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .ignoresSafeArea()
+        }
     }
 
     @ViewBuilder
@@ -270,55 +280,138 @@ struct CreateDestinationSheet: View {
     }
 }
 
+struct CreateScene<Content: View>: View {
+    let prompt: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 28) {
+            Text(prompt)
+                .font(.title2.bold())
+                .multilineTextAlignment(.center)
+            content
+        }
+        .padding(.horizontal, 28)
+        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct CreateField: View {
+    let placeholder: String
+    @Binding var text: String
+    var size: CGFloat = 34
+    var selectsAll = false
+    var isURL = false
+    var onSubmit: () -> Void = {}
+
+    @Environment(AppSettings.self) private var settings
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(spacing: 10) {
+            TextField(placeholder, text: $text)
+                .font(.system(size: size, weight: .bold))
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .focused($focused)
+                .submitLabel(.done)
+                .textInputAutocapitalization(isURL ? .never : .sentences)
+                .autocorrectionDisabled(isURL)
+                .keyboardType(isURL ? .URL : .default)
+                .tint(settings.accent)
+                .onSubmit(onSubmit)
+                .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { note in
+                    guard selectsAll, let field = note.object as? UITextField else { return }
+                    DispatchQueue.main.async { field.selectAll(nil) }
+                }
+            Rectangle()
+                .fill(.secondary.opacity(0.5))
+                .frame(height: 1)
+        }
+        .task {
+            try? await Task.sleep(for: .milliseconds(350))
+            focused = true
+        }
+    }
+}
+
+struct CreateButton: View {
+    let title: String
+    var isBusy = false
+    var isEnabled = true
+    var prominent = true
+    let action: () -> Void
+
+    @Environment(AppSettings.self) private var settings
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(title)
+                if isBusy { ProgressView() }
+            }
+            .font(.headline)
+            .foregroundStyle(prominent ? settings.onAccent : Color.primary)
+            .frame(minWidth: 72)
+            .padding(.horizontal, 12)
+        }
+        .buttonStyle(.glassProminent)
+        .tint(prominent ? settings.accent : Color.primary.opacity(0.18))
+        .controlSize(.large)
+        .disabled(!isEnabled || isBusy)
+        .opacity(isEnabled ? 1 : 0.5)
+    }
+}
+
+struct CreateError: View {
+    let message: String?
+
+    var body: some View {
+        if let message {
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(.red)
+                .multilineTextAlignment(.center)
+        }
+    }
+}
+
 struct NewPlaylistForm: View {
     let done: () -> Void
     @Environment(LibraryStore.self) private var library
     @State private var name = ""
-    @State private var details = ""
-    @State private var isPublic = false
     @State private var isBusy = false
     @State private var errorMessage: String?
 
+    private var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
+
     var body: some View {
-        Form {
-            Section {
-                TextField("Name", text: $name)
-                TextField("Description", text: $details, axis: .vertical)
-                    .lineLimit(1...4)
+        CreateScene(prompt: "Give your playlist a name.") {
+            CreateField(placeholder: "Playlist name", text: $name, selectsAll: true) {
+                Task { await create() }
             }
-            Section {
-                Toggle("Public", isOn: $isPublic)
+            CreateButton(title: "Create", isBusy: isBusy, isEnabled: !trimmed.isEmpty) {
+                Task { await create() }
             }
-            Section {
-                Button {
-                    Task { await create() }
-                } label: {
-                    HStack {
-                        Text("Create playlist")
-                        if isBusy { ProgressView() }
-                    }
-                }
-                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isBusy)
-                if let errorMessage {
-                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
-                }
-            }
+            CreateError(message: errorMessage)
         }
-        .navigationTitle("New playlist")
-        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if name.isEmpty { name = "My playlist #\(library.playlists.count + 1)" }
+        }
     }
 
     private func create() async {
+        guard !trimmed.isEmpty, !isBusy else { return }
         isBusy = true
         errorMessage = nil
         defer { isBusy = false }
-        if library.isSample { return }
+        if library.isSample {
+            done()
+            return
+        }
         do {
-            try await library.createPlaylist(
-                named: name.trimmingCharacters(in: .whitespaces),
-                description: details.trimmingCharacters(in: .whitespacesAndNewlines),
-                isPublic: isPublic
-            )
+            try await library.createPlaylist(named: trimmed)
             done()
         } catch {
             errorMessage = error.localizedDescription
@@ -382,44 +475,36 @@ struct SmartPlaylistForm: View {
     @State private var created: Int?
     @State private var errorMessage: String?
 
+    private var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
+
     var body: some View {
-        Form {
-            Section {
-                TextField("Name", text: $name)
-            }
-            Section {
-                if kind == .topSongs {
-                    Picker("Period", selection: $range) {
-                        ForEach(TopArtistsRange.allCases) { Text($0.title).tag($0) }
-                    }
+        CreateScene(prompt: kind.title) {
+            if let created {
+                Label("\(created) songs added", systemImage: "checkmark.circle.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.tint)
+                CreateButton(title: "Done", action: done)
+            } else {
+                CreateField(placeholder: "Playlist name", text: $name, size: 28, selectsAll: true) {
+                    Task { await create() }
                 }
-                Picker("Songs", selection: $count) {
-                    ForEach(kind.counts, id: \.self) { Text("\($0)").tag($0) }
-                }
-            }
-            Section {
-                if let created {
-                    Label("\(created) songs added", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.tint)
-                    Button("Done", action: done)
-                } else {
-                    Button {
-                        Task { await create() }
-                    } label: {
-                        HStack {
-                            Text("Create playlist")
-                            if isBusy { ProgressView() }
+                HStack(spacing: 12) {
+                    if kind == .topSongs {
+                        Picker("Period", selection: $range) {
+                            ForEach(TopArtistsRange.allCases) { Text($0.title).tag($0) }
                         }
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isBusy)
+                    Picker("Songs", selection: $count) {
+                        ForEach(kind.counts, id: \.self) { Text("\($0) songs").tag($0) }
+                    }
                 }
-                if let errorMessage {
-                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
+                .pickerStyle(.menu)
+                CreateButton(title: "Create", isBusy: isBusy, isEnabled: !trimmed.isEmpty) {
+                    Task { await create() }
                 }
+                CreateError(message: errorMessage)
             }
         }
-        .navigationTitle(kind.title)
-        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if name.isEmpty { name = kind.defaultName }
             count = kind.counts.last ?? 50
@@ -428,10 +513,14 @@ struct SmartPlaylistForm: View {
     }
 
     private func create() async {
+        guard !trimmed.isEmpty, !isBusy else { return }
         isBusy = true
         errorMessage = nil
         defer { isBusy = false }
-        if library.isSample { return }
+        if library.isSample {
+            created = count
+            return
+        }
         do {
             let uris = try await fetchURIs()
             guard !uris.isEmpty else {
@@ -439,7 +528,7 @@ struct SmartPlaylistForm: View {
                 return
             }
             let playlist = try await library.createPlaylist(
-                named: name.trimmingCharacters(in: .whitespaces),
+                named: trimmed,
                 description: "Created with Swiftify"
             )
             for start in stride(from: 0, to: uris.count, by: 100) {
@@ -494,52 +583,48 @@ struct LinkForm: View {
     @State private var link = ""
     @State private var errorMessage: String?
 
+    private var isEmpty: Bool { link.trimmingCharacters(in: .whitespaces).isEmpty }
     private var parsed: SpotifyLink? { SpotifyLink.parse(link) }
 
     var body: some View {
-        Form {
-            Section {
-                TextField("Spotify link", text: $link)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Paste") {
-                    link = UIPasteboard.general.string ?? link
-                }
+        CreateScene(prompt: "Paste a Spotify link.") {
+            CreateField(placeholder: "Link", text: $link, size: 24, isURL: true) { play() }
+            PasteButton(payloadType: String.self) { strings in
+                if let first = strings.first { link = first }
             }
-            Section {
-                Button("Play") {
-                    guard let parsed else {
-                        errorMessage = "That is not a Spotify link"
-                        return
-                    }
-                    Task {
-                        if parsed.isPlayableTrack {
-                            await player.play(uris: [parsed.uri])
-                        } else {
-                            await player.play(context: parsed.uri)
-                        }
-                        done()
-                    }
-                }
-                .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
-                Button("Add to queue") {
-                    guard let parsed, parsed.isPlayableTrack else {
-                        errorMessage = "Only songs and episodes can be queued"
-                        return
-                    }
-                    Task {
-                        await queue.add(uri: parsed.uri)
-                        done()
-                    }
-                }
-                .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
-                if let errorMessage {
-                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
-                }
+            .buttonBorderShape(.capsule)
+            HStack(spacing: 12) {
+                CreateButton(title: "Play", isEnabled: !isEmpty, action: play)
+                CreateButton(title: "Add to queue", isEnabled: !isEmpty, prominent: false, action: enqueue)
             }
+            CreateError(message: errorMessage)
         }
-        .navigationTitle("Play or queue a link")
-        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func play() {
+        guard let parsed else {
+            errorMessage = "That is not a Spotify link"
+            return
+        }
+        Task {
+            if parsed.isPlayableTrack {
+                await player.play(uris: [parsed.uri])
+            } else {
+                await player.play(context: parsed.uri)
+            }
+            done()
+        }
+    }
+
+    private func enqueue() {
+        guard let parsed, parsed.isPlayableTrack else {
+            errorMessage = "Only songs and episodes can be queued"
+            return
+        }
+        Task {
+            await queue.add(uri: parsed.uri)
+            done()
+        }
     }
 }
 
@@ -548,33 +633,27 @@ struct JamForm: View {
     @State private var link = ""
     @State private var errorMessage: String?
 
+    private var isEmpty: Bool { link.trimmingCharacters(in: .whitespaces).isEmpty }
+
     var body: some View {
-        Form {
-            Section {
-                TextField("Jam link", text: $link)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Paste") {
-                    link = UIPasteboard.general.string ?? link
-                }
+        CreateScene(prompt: "Paste a Jam link.") {
+            CreateField(placeholder: "Link", text: $link, size: 24, isURL: true) { join() }
+            PasteButton(payloadType: String.self) { strings in
+                if let first = strings.first { link = first }
             }
-            Section {
-                Button("Join in Spotify") {
-                    let trimmed = link.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard trimmed.contains("socialsession"), let url = URL(string: trimmed) else {
-                        errorMessage = "That is not a Jam link"
-                        return
-                    }
-                    UIApplication.shared.open(url)
-                    done()
-                }
-                .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
-                if let errorMessage {
-                    Text(errorMessage).font(.footnote).foregroundStyle(.red)
-                }
-            }
+            .buttonBorderShape(.capsule)
+            CreateButton(title: "Join in Spotify", isEnabled: !isEmpty, action: join)
+            CreateError(message: errorMessage)
         }
-        .navigationTitle("Join a Jam")
-        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func join() {
+        let trimmed = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.contains("socialsession"), let url = URL(string: trimmed) else {
+            errorMessage = "That is not a Jam link"
+            return
+        }
+        UIApplication.shared.open(url)
+        done()
     }
 }
