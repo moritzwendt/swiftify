@@ -137,6 +137,10 @@ struct Playlist: Decodable, Hashable, Identifiable {
 
     var trackCount: Int? { items?.total ?? tracks?.total }
 
+    static func savesLabel(_ count: Int) -> String {
+        count == 1 ? "1 save" : "\(count.formatted()) saves"
+    }
+
     static func == (lhs: Playlist, rhs: Playlist) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }

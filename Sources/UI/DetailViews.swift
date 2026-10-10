@@ -80,6 +80,7 @@ struct PlaylistDetailView: View {
     @State private var destination: MenuDestination?
     @State private var editMode: EditMode = .inactive
     @State private var serial = SerialTasks()
+    @State private var saves: Int?
 
     private var live: Playlist { library.playlists.first { $0.id == playlist.id } ?? playlist }
     private var canList: Bool { library.canListTracks(of: live) }
@@ -104,9 +105,10 @@ struct PlaylistDetailView: View {
     }
 
     private var subtitle: String {
-        let owner = live.owner?.displayName ?? "Spotify"
-        guard let count = live.trackCount else { return owner }
-        return "\(owner) \u{2022} \(count) songs"
+        var parts = [live.owner?.displayName ?? "Spotify"]
+        if let count = live.trackCount { parts.append("\(count) songs") }
+        if let saves, saves > 0 { parts.append(Playlist.savesLabel(saves)) }
+        return parts.joined(separator: " \u{2022} ")
     }
 
     var body: some View {
@@ -177,6 +179,7 @@ struct PlaylistDetailView: View {
                 isOwned: isOwned,
                 canEdit: canList && (isOwned || live.collaborative == true),
                 isReady: isComplete,
+                saves: saves,
                 onSelect: { pendingDestination = $0 },
                 onEdit: { editMode = .active },
                 onDeleted: { dismiss() }
@@ -194,6 +197,13 @@ struct PlaylistDetailView: View {
             )
         }
         .task { await load() }
+        .task { await loadSaves() }
+    }
+
+    private func loadSaves() async {
+        if library.isSample { return }
+        let box: FollowersBox? = try? await library.api.get("playlists/\(playlist.id)", query: ["fields": "followers(total)"])
+        saves = box?.followers?.total
     }
 
     private func move(from source: IndexSet, to destination: Int) {

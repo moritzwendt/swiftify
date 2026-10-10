@@ -108,7 +108,7 @@ private struct MenuContainer<Content: View>: View {
     }
 }
 
-private struct FollowersBox: Decodable {
+struct FollowersBox: Decodable {
     struct Total: Decodable { let total: Int? }
     let followers: Total?
 }
@@ -119,6 +119,7 @@ struct PlaylistMenuSheet: View {
     let isOwned: Bool
     let canEdit: Bool
     let isReady: Bool
+    let saves: Int?
     let onSelect: (MenuDestination) -> Void
     let onEdit: () -> Void
     let onDeleted: () -> Void
@@ -127,7 +128,6 @@ struct PlaylistMenuSheet: View {
     @Environment(QueueStore.self) private var queue
     @Environment(\.dismiss) private var dismiss
     @State private var confirmDelete = false
-    @State private var saves: Int?
 
     private var shareURL: URL {
         URL(string: "https://open.spotify.com/playlist/\(playlist.id)") ?? URL(string: "https://open.spotify.com")!
@@ -144,7 +144,7 @@ struct PlaylistMenuSheet: View {
 
     private var subtitle: String {
         var parts: [String] = []
-        if let saves { parts.append("\(saves.formatted()) saves") }
+        if let saves, saves > 0 { parts.append(Playlist.savesLabel(saves)) }
         parts.append(kind)
         return parts.joined(separator: " \u{2022} ")
     }
@@ -233,11 +233,6 @@ struct PlaylistMenuSheet: View {
                 dismiss()
                 onDeleted()
             }
-        }
-        .task {
-            if library.isSample { return }
-            let box: FollowersBox? = try? await library.api.get("playlists/\(playlist.id)", query: ["fields": "followers(total)"])
-            saves = box?.followers?.total
         }
     }
 }
