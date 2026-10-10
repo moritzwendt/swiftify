@@ -82,59 +82,59 @@ struct CreateMenu: View {
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
-        @Bindable var settings = settings
         VStack(spacing: 0) {
             item("Playlist", symbol: "music.note") { onSelect(.playlist) }
             item("Play a link", symbol: "link") { onSelect(.link) }
             item("Join a Jam", symbol: "person.2.wave.2.fill") { onSelect(.jam) }
 
-            HStack(spacing: 16) {
-                icon("wand.and.stars", size: 48)
-                Text("Smart playlists")
-                    .font(.headline)
-                Spacer(minLength: 0)
-                Toggle("Smart playlists", isOn: $settings.showSmartPlaylists.animation(.snappy))
-                    .labelsHidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-
             if settings.showSmartPlaylists {
                 ForEach(SmartKind.allCases) { kind in
-                    item(kind.title, symbol: kind.symbol, size: 40) { onSelect(.smart(kind)) }
-                        .padding(.leading, 24)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    item(kind.title, symbol: kind.symbol) { onSelect(.smart(kind)) }
                 }
             }
 
-            item("Open Spotify", symbol: "arrow.up.forward.app.fill", action: onOpenSpotify)
+            Button(action: onOpenSpotify) {
+                row(title: "Open Spotify") {
+                    ZStack {
+                        Circle().fill(.black)
+                        Image(uiImage: SpotifyGlyph.image)
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundStyle(Color(hex: "1ED760"))
+                    }
+                    .frame(width: 48, height: 48)
+                }
+            }
+            .buttonStyle(.plain)
         }
         .padding(.vertical, 10)
         .glassEffect(.regular, in: .rect(cornerRadius: 32))
     }
 
-    private func icon(_ symbol: String, size: CGFloat) -> some View {
-        Image(systemName: symbol)
-            .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(.primary)
-            .frame(width: size, height: size)
-            .background(Color.primary.opacity(0.12), in: Circle())
-    }
-
-    private func item(_ title: String, symbol: String, size: CGFloat = 48, action: @escaping () -> Void) -> some View {
+    private func item(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 16) {
-                icon(symbol, size: size)
-                Text(title)
-                    .font(size > 40 ? .headline : .body)
+            row(title: title) {
+                Image(systemName: symbol)
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.primary)
-                Spacer(minLength: 0)
+                    .frame(width: 48, height: 48)
+                    .background(Color.primary.opacity(0.12), in: Circle())
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func row<Icon: View>(title: String, @ViewBuilder icon: () -> Icon) -> some View {
+        HStack(spacing: 16) {
+            icon()
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 }
 
