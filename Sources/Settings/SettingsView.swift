@@ -114,7 +114,7 @@ struct SettingsView: View {
 
             Section {
                 Button {
-                    if let url = URL(string: "spotify://") { UIApplication.shared.open(url) }
+                    SpotifyApp.open()
                 } label: {
                     HStack(spacing: 12) {
                         IconTile(symbol: "arrow.up.forward.app.fill", color: .green)

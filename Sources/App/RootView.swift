@@ -83,27 +83,26 @@ struct MainTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: AppTab = .home
     @State private var showCreate = false
+    @State private var createDestination: CreateDestination?
     @State private var showPlayer = false
     @Namespace private var playerSpace
 
     var body: some View {
-        TabView(selection: $selection) {
-            Tab("Home", systemImage: "house.fill", value: AppTab.home) { HomeView() }
-            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) { SearchView() }
-            Tab("Your Library", systemImage: "books.vertical.fill", value: AppTab.library) { LibraryView() }
-            Tab("Create", systemImage: "plus", value: AppTab.create) { Color.clear }
+        TabView(selection: tabSelection) {
+            Tab("Home", systemImage: "house.fill", value: AppTab.home) { HomeView().createMenu(isPresented: $showCreate, onSelect: choose) }
+            Tab("Search", systemImage: "magnifyingglass", value: AppTab.search) { SearchView().createMenu(isPresented: $showCreate, onSelect: choose) }
+            Tab("Your Library", systemImage: "books.vertical.fill", value: AppTab.library) { LibraryView().createMenu(isPresented: $showCreate, onSelect: choose) }
+            Tab(value: AppTab.create) {
+                Color.clear
+            } label: {
+                createLabel
+            }
         }
         .tabBarMinimizeBehavior(settings.tabBarMinimizes ? .onScrollDown : .never)
         .tabViewBottomAccessory(isEnabled: player.track != nil) {
             MiniPlayer(namespace: playerSpace) { showPlayer = true }
         }
-        .onChange(of: selection) { old, new in
-            if new == .create {
-                selection = old
-                showCreate = true
-            }
-        }
-        .sheet(isPresented: $showCreate) { CreateSheet() }
+        .sheet(item: $createDestination) { CreateDestinationSheet(destination: $0) }
         .sheet(isPresented: Binding(get: { chrome.showsSettings }, set: { chrome.showsSettings = $0 })) {
             NavigationStack { SettingsView() }
         }
@@ -128,6 +127,31 @@ struct MainTabView: View {
                 if phase == .background { player.appDidEnterBackground() }
             }
         }
+    }
+
+    private var tabSelection: Binding<AppTab> {
+        Binding(
+            get: { selection },
+            set: { tab in
+                if tab == .create {
+                    withAnimation(.snappy) { showCreate.toggle() }
+                } else {
+                    selection = tab
+                    if showCreate {
+                        withAnimation(.snappy) { showCreate = false }
+                    }
+                }
+            }
+        )
+    }
+
+    private func choose(_ destination: CreateDestination) {
+        withAnimation(.snappy) { showCreate = false }
+        createDestination = destination
+    }
+
+    private var createLabel: some View {
+        Label("Create", systemImage: showCreate ? "xmark" : "plus")
     }
 
     @ViewBuilder

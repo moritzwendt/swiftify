@@ -25,57 +25,151 @@ struct SpotifyLink {
     }
 }
 
-struct CreateSheet: View {
+enum SpotifyApp {
+    static func open() {
+        guard let url = URL(string: "spotify://") else { return }
+        UIApplication.shared.open(url)
+    }
+}
+
+enum CreateDestination: Identifiable, Hashable {
+    case playlist
+    case link
+    case jam
+    case smart(SmartKind)
+
+    var id: String {
+        switch self {
+        case .playlist: "playlist"
+        case .link: "link"
+        case .jam: "jam"
+        case .smart(let kind): "smart-\(kind.rawValue)"
+        }
+    }
+}
+
+struct CreateMenu: View {
+    let onSelect: (CreateDestination) -> Void
+    let onOpenSpotify: () -> Void
+
+    @Environment(AppSettings.self) private var settings
+
+    var body: some View {
+        @Bindable var settings = settings
+        VStack(spacing: 0) {
+            item("Playlist", symbol: "music.note") { onSelect(.playlist) }
+            item("Play a link", symbol: "link") { onSelect(.link) }
+            item("Join a Jam", symbol: "person.2.wave.2.fill") { onSelect(.jam) }
+
+            HStack(spacing: 16) {
+                icon("wand.and.stars", size: 48)
+                Text("Smart playlists")
+                    .font(.headline)
+                Spacer(minLength: 0)
+                Toggle("Smart playlists", isOn: $settings.showSmartPlaylists.animation(.snappy))
+                    .labelsHidden()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+
+            if settings.showSmartPlaylists {
+                ForEach(SmartKind.allCases) { kind in
+                    item(kind.title, symbol: kind.symbol, size: 40) { onSelect(.smart(kind)) }
+                        .padding(.leading, 24)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+
+            item("Open Spotify", symbol: "arrow.up.forward.app.fill", action: onOpenSpotify)
+        }
+        .padding(.vertical, 10)
+        .glassEffect(.regular, in: .rect(cornerRadius: 32))
+    }
+
+    private func icon(_ symbol: String, size: CGFloat) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.42, weight: .semibold))
+            .foregroundStyle(.primary)
+            .frame(width: size, height: size)
+            .background(Color.primary.opacity(0.12), in: Circle())
+    }
+
+    private func item(_ title: String, symbol: String, size: CGFloat = 48, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                icon(symbol, size: size)
+                Text(title)
+                    .font(size > 40 ? .headline : .body)
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct CreateMenuOverlay: ViewModifier {
+    @Binding var isPresented: Bool
+    let onSelect: (CreateDestination) -> Void
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            if isPresented {
+                ZStack(alignment: .bottom) {
+                    Color.black.opacity(0.45)
+                        .ignoresSafeArea()
+                        .onTapGesture { close() }
+                    CreateMenu(onSelect: onSelect, onOpenSpotify: {
+                        close()
+                        SpotifyApp.open()
+                    })
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                    .transition(.scale(scale: 0.92, anchor: .bottom).combined(with: .opacity))
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+
+    private func close() {
+        withAnimation(.snappy) { isPresented = false }
+    }
+}
+
+extension View {
+    func createMenu(isPresented: Binding<Bool>, onSelect: @escaping (CreateDestination) -> Void) -> some View {
+        modifier(CreateMenuOverlay(isPresented: isPresented, onSelect: onSelect))
+    }
+}
+
+struct CreateDestinationSheet: View {
+    let destination: CreateDestination
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    row("New playlist", symbol: "music.note.list", color: .pink) {
-                        NewPlaylistForm(done: { dismiss() })
-                    }
-                    row("Play or queue a link", symbol: "link", color: .blue) {
-                        LinkForm(done: { dismiss() })
-                    }
-                    row("Join a Jam", symbol: "person.2.wave.2.fill", color: .orange) {
-                        JamForm(done: { dismiss() })
+            content
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(role: .close) { dismiss() }
+                            .tint(.primary)
                     }
                 }
-
-                Section("Smart playlists") {
-                    ForEach(SmartKind.allCases) { kind in
-                        row(kind.title, symbol: kind.symbol, color: kind.color) {
-                            SmartPlaylistForm(kind: kind, done: { dismiss() })
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Create")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(role: .close) { dismiss() }
-                        .tint(.primary)
-                }
-            }
         }
         .presentationDetents([.medium, .large])
     }
 
-    private func row<Destination: View>(
-        _ title: String,
-        symbol: String,
-        color: Color,
-        @ViewBuilder destination: @escaping () -> Destination
-    ) -> some View {
-        NavigationLink {
-            destination()
-        } label: {
-            HStack(spacing: 12) {
-                IconTile(symbol: symbol, color: color)
-                Text(title)
-            }
+    @ViewBuilder
+    private var content: some View {
+        switch destination {
+        case .playlist: NewPlaylistForm(done: { dismiss() })
+        case .link: LinkForm(done: { dismiss() })
+        case .jam: JamForm(done: { dismiss() })
+        case .smart(let kind): SmartPlaylistForm(kind: kind, done: { dismiss() })
         }
     }
 }
