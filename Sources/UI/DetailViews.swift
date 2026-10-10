@@ -77,12 +77,18 @@ struct DetailHeader: View {
 
 private struct TrackSearch: ViewModifier {
     @Binding var text: String
+    @Binding var isActive: Bool
     let enabled: Bool
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if enabled {
-            content.searchable(text: $text, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Find in playlist")
+            content.searchable(
+                text: $text,
+                isPresented: $isActive,
+                placement: .navigationBarDrawer(displayMode: .automatic),
+                prompt: "Find in playlist"
+            )
         } else {
             content
         }
@@ -90,8 +96,21 @@ private struct TrackSearch: ViewModifier {
 }
 
 private extension View {
-    func trackSearch(text: Binding<String>, enabled: Bool = true) -> some View {
-        modifier(TrackSearch(text: text, enabled: enabled))
+    func trackSearch(text: Binding<String>, isActive: Binding<Bool>, enabled: Bool = true) -> some View {
+        modifier(TrackSearch(text: text, isActive: isActive, enabled: enabled))
+    }
+}
+
+private struct SearchButton: View {
+    @Binding var isActive: Bool
+
+    var body: some View {
+        Button {
+            isActive = true
+        } label: {
+            Image(systemName: "magnifyingglass")
+        }
+        .accessibilityLabel("Find in playlist")
     }
 }
 
@@ -116,13 +135,14 @@ struct PlaylistDetailView: View {
     @State private var editMode: EditMode = .inactive
     @State private var serial = SerialTasks()
     @State private var query = ""
+    @State private var isSearching = false
     @State private var saves: Int?
 
     private var live: Playlist { library.playlists.first { $0.id == playlist.id } ?? playlist }
     private var canList: Bool { library.canListTracks(of: live) }
     private var isOwned: Bool { library.me != nil && live.owner?.id == library.me?.id }
     private var isEditing: Bool { editMode == .active }
-    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var hasQuery: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
     private var visibleTracks: [(offset: Int, element: Track)] { indexedTracks(tracks, matching: query) }
 
     private var trailingAction: HeaderAction {
@@ -151,19 +171,21 @@ struct PlaylistDetailView: View {
 
     var body: some View {
         List {
-            DetailHeader(
-                imageURL: live.images.url(atLeast: 640),
-                title: live.name,
-                subtitle: subtitle,
-                isPlaying: player.isPlaying(context: live.uri),
-                leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
-                    Task { await player.toggleShuffle() }
-                },
-                trailing: trailingAction
-            ) {
-                Task { await player.playOrPause(context: live.uri) }
+            if !isSearching {
+                DetailHeader(
+                    imageURL: live.images.url(atLeast: 640),
+                    title: live.name,
+                    subtitle: subtitle,
+                    isPlaying: player.isPlaying(context: live.uri),
+                    leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
+                        Task { await player.toggleShuffle() }
+                    },
+                    trailing: trailingAction
+                ) {
+                    Task { await player.playOrPause(context: live.uri) }
+                }
+                .detailRow(top: 0)
             }
-            .detailRow(top: 0)
 
             if canList {
                 ForEach(visibleTracks, id: \.offset) { index, track in
@@ -182,7 +204,7 @@ struct PlaylistDetailView: View {
                 .onMove(perform: move)
                 .onDelete(perform: remove)
 
-                if isSearching && visibleTracks.isEmpty {
+                if hasQuery && visibleTracks.isEmpty {
                     ContentUnavailableView.search(text: query)
                         .detailRow(top: 24)
                 }
@@ -198,12 +220,15 @@ struct PlaylistDetailView: View {
         .environment(\.defaultMinListRowHeight, 0)
         .environment(\.editMode, $editMode)
         .navigationBarTitleDisplayMode(.inline)
-        .trackSearch(text: $query, enabled: canList)
+        .trackSearch(text: $query, isActive: $isSearching, enabled: canList && isSearching)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 if isEditing {
                     Button("Done") { editMode = .inactive }
                 } else {
+                    if canList {
+                        SearchButton(isActive: $isSearching)
+                    }
                     Button {
                         showMenu = true
                     } label: {
@@ -486,25 +511,28 @@ struct LikedSongsView: View {
     @State private var pendingDestination: MenuDestination?
     @State private var destination: MenuDestination?
     @State private var query = ""
+    @State private var isSearching = false
 
-    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var hasQuery: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
     private var visibleTracks: [(offset: Int, element: Track)] { indexedTracks(tracks, matching: query) }
 
     var body: some View {
         List {
-            DetailHeader(
-                imageURL: nil,
-                liked: true,
-                title: "Liked Songs",
-                subtitle: "\(library.likedTotal) songs",
-                isPlaying: player.isPlaying(context: Self.contextKey),
-                leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
-                    Task { await player.toggleShuffle() }
+            if !isSearching {
+                DetailHeader(
+                    imageURL: nil,
+                    liked: true,
+                    title: "Liked Songs",
+                    subtitle: "\(library.likedTotal) songs",
+                    isPlaying: player.isPlaying(context: Self.contextKey),
+                    leading: HeaderAction(symbol: "shuffle", label: "Shuffle", isOn: player.shuffle) {
+                        Task { await player.toggleShuffle() }
+                    }
+                ) {
+                    Task { await player.playOrPause(uris: tracks.map(\.uri), key: Self.contextKey) }
                 }
-            ) {
-                Task { await player.playOrPause(uris: tracks.map(\.uri), key: Self.contextKey) }
+                .detailRow(top: 0)
             }
-            .detailRow(top: 0)
 
             ForEach(visibleTracks, id: \.offset) { index, track in
                 Button {
@@ -517,7 +545,7 @@ struct LikedSongsView: View {
                 .detailRow()
             }
 
-            if isSearching && visibleTracks.isEmpty {
+            if hasQuery && visibleTracks.isEmpty {
                 ContentUnavailableView.search(text: query)
                     .detailRow(top: 24)
             }
@@ -525,9 +553,10 @@ struct LikedSongsView: View {
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)
         .navigationBarTitleDisplayMode(.inline)
-        .trackSearch(text: $query)
+        .trackSearch(text: $query, isActive: $isSearching, enabled: isSearching)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                SearchButton(isActive: $isSearching)
                 Button {
                     showMenu = true
                 } label: {
