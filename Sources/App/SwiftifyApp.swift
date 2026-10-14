@@ -53,7 +53,7 @@ struct SwiftifyApp: App {
                 .environment(chrome)
                 .environment(warmer)
                 .tint(settings.accent)
-                .preferredColorScheme(settings.appearance.colorScheme)
+                .preferredColorScheme(auth.isAuthenticated || library.isSample ? settings.appearance.colorScheme : .dark)
                 .onChange(of: auth.isAuthenticated) { _, signedIn in
                     if !signedIn {
                         library.reset()

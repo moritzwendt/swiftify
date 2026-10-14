@@ -19,7 +19,7 @@ struct RootView: View {
             if auth.isAuthenticated || library.isSample {
                 MainTabView()
             } else {
-                LoginView()
+                OnboardingFlowView()
             }
             if let coverMode {
                 LaunchCover(mode: coverMode) {
@@ -36,71 +36,6 @@ struct RootView: View {
                 BootLog.shared.finish()
             }
         }
-    }
-}
-
-struct LoginView: View {
-    @Environment(AuthManager.self) private var auth
-    @Environment(AppSettings.self) private var settings
-    @State private var setup: ClientIDSetupMode?
-
-    var body: some View {
-        ZStack {
-            LinearGradient(colors: [settings.accent.opacity(0.5), .black], startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
-            if let setup {
-                ClientIDSetupView(mode: setup, onBack: { self.setup = nil }, onSaved: { self.setup = nil })
-                    .transition(.opacity)
-            } else {
-                welcome
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: setup)
-        .environment(\.colorScheme, .dark)
-    }
-
-    private var welcome: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            Text("Swiftify")
-                .font(.system(size: 44, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-            Spacer()
-            VStack(spacing: 20) {
-                if let message = auth.errorMessage {
-                    Text(message)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                }
-                if auth.hasClientID {
-                    PillButton(title: "Sign in with Spotify", isDisabled: auth.isSigningIn) {
-                        Task { await auth.signIn() }
-                    }
-                    footerLink(question: "Wrong Client ID?", action: "Change it here") { setup = .entry }
-                } else {
-                    PillButton(title: "Set up Client ID") { setup = .guide }
-                    footerLink(question: "Already have a Client ID?", action: "Enter it here") { setup = .entry }
-                }
-            }
-            .padding(.horizontal, 22)
-            .padding(.bottom, 24)
-        }
-    }
-
-    private func footerLink(question: String, action: String, onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
-            HStack(spacing: 4) {
-                Text(question)
-                    .foregroundStyle(.white.opacity(0.6))
-                Text(action)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-            }
-            .font(.subheadline)
-        }
-        .buttonStyle(.plain)
     }
 }
 

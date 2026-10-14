@@ -15,10 +15,12 @@
 		1F02C94439C49CE1798E4713 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47E07B50B8AB7364BD96D94 /* SettingsView.swift */; };
 		20DC5D18BC0C435070D71B24 /* Lyrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D5DB397DA92DA5F03AFE50 /* Lyrics.swift */; };
 		31AB5FD3EEA24DD2A06F75B8 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F798C91C8348DB06C3AFE5 /* HomeView.swift */; };
+		332EB06E23013049A0270623 /* OnboardingScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA2C739E37A547498581836 /* OnboardingScreens.swift */; };
 		343987956BAB9D90269A3A05 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F921DF436A201E5E30C2527 /* LibraryStore.swift */; };
 		3E8F805EACC3B885B8617EE5 /* LaunchCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58AF2CBF52301AF75888BBA4 /* LaunchCover.swift */; };
 		417AA39FE41CDB0726295828 /* SaveToSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */; };
 		41DAB557DE1950B6457410AC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FD75F24ECB8AAA81C5AC8588 /* Assets.xcassets */; };
+		433C67B301EE5679BDE3718D /* OnboardingKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11EE32DB53A6B957CFC491F3 /* OnboardingKit.swift */; };
 		5007E9366424709DEBCEDCF7 /* PKCE.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC357319C2EB58FDD95138 /* PKCE.swift */; };
 		519007480FE4DA19E60C3D4D /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6077B53A716C4C9707F0B4D /* Components.swift */; };
 		55565CDD5E6594F6AF7CDAC5 /* PlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D9E47EC0CC750B9A6F48F2C /* PlayerManager.swift */; };
@@ -37,12 +39,12 @@
 		A3BAAC4BA11568F47B18AD50 /* SwiftifyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */; };
 		A9F7C2525563870D3BB54F3A /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2845162E089807930C2FF0 /* SearchView.swift */; };
 		AA3D0E0945D07788FFAB1E5D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448568EAAECAFD202065608F /* AppSettings.swift */; };
-		B4CAA2B5EFED6125093F8C53 /* ClientIDSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2CE3EF41CEFC29974461207 /* ClientIDSetupView.swift */; };
 		B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AB62131834C889BBB1EB2 /* AuthManager.swift */; };
 		BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5125EC825CC5FD3461D2E70A /* CacheSettings.swift */; };
 		C0062E1906DDF0EA1D255970 /* DeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7FFC64CB2A543BFB7A45AD /* DeviceSheet.swift */; };
 		D43019C252028289DC589E1D /* CreateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63152471936FB65D84D134F /* CreateSheet.swift */; };
 		D47392733FBB19D85B3AC1BE /* DetailMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D45DCD69F6C11658BC8898 /* DetailMenu.swift */; };
+		D4C32F7E06B1F9D5344C8101 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE91687B9BF30D306076571 /* OnboardingFlowView.swift */; };
 		D741C27E8280915C8714DEF9 /* LyricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */; };
 		DB5A83FE33457199874C0294 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9253737EC9EB49D97054D3CF /* Player.swift */; };
 		DFB53B4B8AD6EAFBBBA6B94B /* LyricsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82BEDC5693E4D9400D8C7C04 /* LyricsClient.swift */; };
@@ -55,6 +57,7 @@
 		055BBB40A64B448CFC70A1FF /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
 		083F8D4E913657C67F8C3D07 /* BootLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BootLog.swift; sourceTree = "<group>"; };
 		11D45DCD69F6C11658BC8898 /* DetailMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailMenu.swift; sourceTree = "<group>"; };
+		11EE32DB53A6B957CFC491F3 /* OnboardingKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingKit.swift; sourceTree = "<group>"; };
 		1D790EFBDB63E268712C9DD2 /* TrackListCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackListCache.swift; sourceTree = "<group>"; };
 		2F921DF436A201E5E30C2527 /* LibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStore.swift; sourceTree = "<group>"; };
 		32F798C91C8348DB06C3AFE5 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -79,6 +82,7 @@
 		9253737EC9EB49D97054D3CF /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		9CAC357319C2EB58FDD95138 /* PKCE.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCE.swift; sourceTree = "<group>"; };
 		9CBE2F2DF5C4EE0DC2DB1B2D /* ChromeState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromeState.swift; sourceTree = "<group>"; };
+		AAA2C739E37A547498581836 /* OnboardingScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingScreens.swift; sourceTree = "<group>"; };
 		ABC856203CAD985E07B8FD41 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		AE95AE8EA99EB31F9CE2D06C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		AF0AAB1F34BACA7B0F3F5353 /* DetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViews.swift; sourceTree = "<group>"; };
@@ -86,7 +90,6 @@
 		B769C5DF06222A13ADFB1C0A /* CacheWarmer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheWarmer.swift; sourceTree = "<group>"; };
 		C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsView.swift; sourceTree = "<group>"; };
 		C187B116A8622056CC4AA47E /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
-		D2CE3EF41CEFC29974461207 /* ClientIDSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientIDSetupView.swift; sourceTree = "<group>"; };
 		DB8AB62131834C889BBB1EB2 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveToSheet.swift; sourceTree = "<group>"; };
 		E47E07B50B8AB7364BD96D94 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -94,6 +97,7 @@
 		E7AAA2D8023F2EB880E1B4F3 /* LyricRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricRowView.swift; sourceTree = "<group>"; };
 		E7B74EE95DE8203EF529A9CC /* LyricsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsStore.swift; sourceTree = "<group>"; };
 		E88FD3E0D136B8EC90FFDD6C /* ImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
+		FAE91687B9BF30D306076571 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		FD75F24ECB8AAA81C5AC8588 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -189,6 +193,16 @@
 			path = API;
 			sourceTree = "<group>";
 		};
+		862AEE2390BF79A6A57F5609 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				FAE91687B9BF30D306076571 /* OnboardingFlowView.swift */,
+				11EE32DB53A6B957CFC491F3 /* OnboardingKit.swift */,
+				AAA2C739E37A547498581836 /* OnboardingScreens.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
 		9F7C558FB7D7685AA03F29F0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -210,7 +224,6 @@
 			isa = PBXGroup;
 			children = (
 				083F8D4E913657C67F8C3D07 /* BootLog.swift */,
-				D2CE3EF41CEFC29974461207 /* ClientIDSetupView.swift */,
 				58AF2CBF52301AF75888BBA4 /* LaunchCover.swift */,
 				60A73919D7BA1AB3BD998AC6 /* PlaybackTestView.swift */,
 				AE95AE8EA99EB31F9CE2D06C /* RootView.swift */,
@@ -241,6 +254,7 @@
 				A0D2E2023535603B5F031A36 /* Library */,
 				C604705F47E23563062801A6 /* Lyrics */,
 				14C49127DEFC66E8A7ADEB3B /* Models */,
+				862AEE2390BF79A6A57F5609 /* Onboarding */,
 				430CBD2BBB378A424C2E71D9 /* Player */,
 				801BCDFA943D51C19B813A03 /* Queue */,
 				2C5C17C87F8192A8D4EDC5F2 /* Settings */,
@@ -361,7 +375,6 @@
 				BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */,
 				724CEC032C722271F24F17CE /* CacheWarmer.swift in Sources */,
 				9AA1BF32A0D4314CC516E60E /* ChromeState.swift in Sources */,
-				B4CAA2B5EFED6125093F8C53 /* ClientIDSetupView.swift in Sources */,
 				519007480FE4DA19E60C3D4D /* Components.swift in Sources */,
 				D43019C252028289DC589E1D /* CreateSheet.swift in Sources */,
 				D47392733FBB19D85B3AC1BE /* DetailMenu.swift in Sources */,
@@ -379,6 +392,9 @@
 				D741C27E8280915C8714DEF9 /* LyricsView.swift in Sources */,
 				11B7039050FC8BFA776CB9D2 /* MembershipStore.swift in Sources */,
 				E7DF497C9E42390C4E4987E9 /* Models.swift in Sources */,
+				D4C32F7E06B1F9D5344C8101 /* OnboardingFlowView.swift in Sources */,
+				433C67B301EE5679BDE3718D /* OnboardingKit.swift in Sources */,
+				332EB06E23013049A0270623 /* OnboardingScreens.swift in Sources */,
 				5007E9366424709DEBCEDCF7 /* PKCE.swift in Sources */,
 				9A1BB7F8F550CDD0A1D9B174 /* PlaybackTestView.swift in Sources */,
 				DB5A83FE33457199874C0294 /* Player.swift in Sources */,
