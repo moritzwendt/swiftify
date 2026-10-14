@@ -45,10 +45,10 @@ struct OnboardingPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(.black)
+            .foregroundStyle(isEnabled ? Color.black : Color.white.opacity(0.35))
             .frame(maxWidth: .infinity)
             .frame(height: height)
-            .background(.white.opacity(isEnabled ? 1 : 0.28), in: .rect(cornerRadius: 18, style: .continuous))
+            .background(isEnabled ? Color.white : Color(white: 0.2), in: .rect(cornerRadius: 18, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .opacity(configuration.isPressed ? 0.88 : 1)
             .animation(.spring(response: 0.24, dampingFraction: 0.78), value: configuration.isPressed)
@@ -57,11 +57,12 @@ struct OnboardingPrimaryButtonStyle: ButtonStyle {
 
 struct OnboardingOutlineButtonStyle: ButtonStyle {
     var height: CGFloat = 56
+    @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.4))
             .frame(maxWidth: .infinity)
             .frame(height: height)
             .onboardingSurface(cornerRadius: 18, stroke: .white.opacity(0.16))
@@ -132,6 +133,13 @@ struct OnboardingScaffold<Content: View, Actions: View>: View {
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.interactively)
+            .mask {
+                VStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 16)
+                }
+            }
 
             VStack(spacing: 10) {
                 actions
@@ -233,8 +241,9 @@ struct OnboardingHero: View {
             .foregroundStyle(settings.onAccent)
             .frame(width: 88, height: 88)
             .background(settings.accent.gradient, in: .rect(cornerRadius: 26, style: .continuous))
-            .shadow(color: settings.accent.opacity(0.35), radius: 24, y: 10)
-            .padding(.vertical, 10)
+            .shadow(color: settings.accent.opacity(0.3), radius: 20, y: 8)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
             .animation(.smooth(duration: 0.3), value: settings.accentHex)
             .accessibilityHidden(true)
     }

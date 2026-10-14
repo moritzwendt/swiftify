@@ -5,13 +5,12 @@ enum OnboardingStep: Hashable {
 }
 
 enum OnboardingFlow {
-    case full, entry, change
+    case full, entry
 
     var steps: [OnboardingStep] {
         switch self {
         case .full: [.dashboard, .appSettings, .clientID, .appearance, .layout, .cache, .signIn]
         case .entry: [.clientID, .appearance, .layout, .cache, .signIn]
-        case .change: [.clientID]
         }
     }
 }
@@ -81,8 +80,7 @@ struct OnboardingFlowView: View {
         OnboardingWelcomeScreen(
             isLeaving: $isLeavingWelcome,
             onSetup: { start(.full) },
-            onEnterID: { start(.entry) },
-            onChangeID: { start(.change) }
+            onEnterID: { start(.entry) }
         )
     }
 
@@ -159,12 +157,10 @@ struct OnboardingFlowView: View {
 }
 
 private struct OnboardingWelcomeScreen: View {
-    @Environment(AuthManager.self) private var auth
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var isLeaving: Bool
     let onSetup: () -> Void
     let onEnterID: () -> Void
-    let onChangeID: () -> Void
     @State private var appeared = false
 
     var body: some View {
@@ -185,35 +181,11 @@ private struct OnboardingWelcomeScreen: View {
             Spacer(minLength: 12)
 
             VStack(spacing: 6) {
-                if auth.hasClientID, let message = auth.errorMessage {
-                    OnboardingBanner(message: message)
-                        .padding(.bottom, 8)
-                }
-
-                if auth.hasClientID {
-                    Button {
-                        Task { await auth.signIn() }
-                    } label: {
-                        HStack(spacing: 10) {
-                            if auth.isSigningIn {
-                                ProgressView().tint(.black)
-                            }
-                            Text("Sign in with Spotify")
-                        }
-                    }
+                Button("Set up Client ID") { leave(using: onSetup) }
                     .buttonStyle(OnboardingPrimaryButtonStyle())
-                    .disabled(auth.isSigningIn)
 
-                    footerLink(question: "Wrong Client ID?", action: "Change it here") {
-                        leave(using: onChangeID)
-                    }
-                } else {
-                    Button("Set up Client ID") { leave(using: onSetup) }
-                        .buttonStyle(OnboardingPrimaryButtonStyle())
-
-                    footerLink(question: "Already have a Client ID?", action: "Enter it here") {
-                        leave(using: onEnterID)
-                    }
+                footerLink(question: "Already have a Client ID?", action: "Enter it here") {
+                    leave(using: onEnterID)
                 }
             }
             .padding(.horizontal, 22)

@@ -28,17 +28,15 @@ struct OnboardingDashboardScreen: View {
         } actions: {
             Button {
                 openURL(SpotifyConfig.dashboardURL)
+                onContinue()
             } label: {
                 HStack(spacing: 8) {
                     Text("Open Dashboard")
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                 }
             }
-            .buttonStyle(OnboardingOutlineButtonStyle())
-
-            Button("Continue", action: onContinue)
-                .buttonStyle(OnboardingPrimaryButtonStyle())
+            .buttonStyle(OnboardingPrimaryButtonStyle())
         }
     }
 }
@@ -69,7 +67,7 @@ struct OnboardingAppSettingsScreen: View {
                 }
             }
         } actions: {
-            Button("Continue", action: onContinue)
+            Button("Continue to Client ID", action: onContinue)
                 .buttonStyle(OnboardingPrimaryButtonStyle())
         }
     }
@@ -85,16 +83,11 @@ struct OnboardingClientIDScreen: View {
     private var isValid: Bool { AuthManager.isValidClientID(clientID) }
 
     var body: some View {
-        OnboardingScaffold(title: "Paste your Client ID") {
+        OnboardingScaffold(title: "Paste your Client ID", banner: auth.errorMessage) {
             VStack(spacing: 14) {
-                OnboardingHero(symbol: "key.fill")
-                OnboardingCard {
-                    OnboardingInfoRow(
-                        symbol: "key.fill",
-                        color: .indigo,
-                        title: "Client ID",
-                        detail: "Open your app, tap Settings and copy the Client ID."
-                    )
+                if !focused {
+                    OnboardingHero(symbol: "key.fill")
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
 
                 HStack(spacing: 10) {
@@ -126,24 +119,55 @@ struct OnboardingClientIDScreen: View {
                 .onboardingField(focused: focused)
                 .animation(.smooth(duration: 0.2), value: isValid)
 
+                OnboardingCard {
+                    OnboardingInfoRow(
+                        symbol: "key.fill",
+                        color: .indigo,
+                        title: "Client ID",
+                        detail: "Open your app, tap Settings and copy the Client ID."
+                    )
+                }
+
                 if showsRedirect {
                     OnboardingCard(padding: 0) {
                         OnboardingCopyRow(label: "Add this Redirect URI to your app", value: SpotifyConfig.redirectURI)
                     }
                 }
             }
+            .animation(.smooth(duration: 0.25), value: focused)
         } actions: {
             Button("Continue", action: submit)
                 .buttonStyle(OnboardingPrimaryButtonStyle())
                 .disabled(!isValid)
+
+            Button(action: signInNow) {
+                HStack(spacing: 10) {
+                    if auth.isSigningIn {
+                        ProgressView().tint(.white)
+                    }
+                    Text("Sign in with Spotify")
+                }
+            }
+            .buttonStyle(OnboardingOutlineButtonStyle())
+            .disabled(!isValid || auth.isSigningIn)
         }
-        .onAppear { clientID = auth.clientID }
+        .onAppear {
+            clientID = auth.clientID
+            auth.clearError()
+        }
     }
 
     private func submit() {
         guard isValid else { return }
         focused = false
         if auth.saveClientID(clientID) { onContinue() }
+    }
+
+    private func signInNow() {
+        guard isValid else { return }
+        focused = false
+        guard auth.saveClientID(clientID) else { return }
+        Task { await auth.signIn() }
     }
 }
 

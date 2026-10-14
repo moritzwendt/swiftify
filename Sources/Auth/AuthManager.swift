@@ -72,6 +72,10 @@ final class AuthManager {
         }
     }
 
+    func clearError() {
+        errorMessage = nil
+    }
+
     @discardableResult
     func saveClientID(_ value: String) -> Bool {
         guard Self.isValidClientID(value) else {
