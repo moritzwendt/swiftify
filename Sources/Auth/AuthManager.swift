@@ -32,15 +32,31 @@ final class AuthManager {
     private(set) var isAuthenticated: Bool
     private(set) var isSigningIn = false
     private(set) var errorMessage: String?
+    private(set) var clientID: String
 
+    @ObservationIgnored private static let clientIDKey = "spotify.clientID"
     @ObservationIgnored private let store = TokenStore()
     @ObservationIgnored private var tokens: StoredTokens?
     @ObservationIgnored private var refreshTask: Task<StoredTokens, Error>?
     @ObservationIgnored private var webSession: ASWebAuthenticationSession?
     @ObservationIgnored private let presenter = PresentationAnchorProvider()
 
+    var hasClientID: Bool { !clientID.isEmpty }
+
+    static func isValidClientID(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count == 32 && trimmed.allSatisfy(\.isHexDigit)
+    }
+
     init() {
+        let storedClientID = UserDefaults.standard.string(forKey: Self.clientIDKey) ?? ""
+        clientID = storedClientID
         var saved = store.load()
+        if saved != nil, storedClientID.isEmpty {
+            store.clear()
+            saved = nil
+            BootLog.shared.note("auth", "no client id, stored token cleared")
+        }
         if let current = saved, current.scope != SpotifyConfig.scopeString {
             store.clear()
             saved = nil
@@ -56,8 +72,22 @@ final class AuthManager {
         }
     }
 
+    @discardableResult
+    func saveClientID(_ value: String) -> Bool {
+        guard Self.isValidClientID(value) else {
+            errorMessage = "Client ID must be 32 letters and numbers"
+            return false
+        }
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if normalized != clientID, isAuthenticated { signOut() }
+        clientID = normalized
+        UserDefaults.standard.set(normalized, forKey: Self.clientIDKey)
+        errorMessage = nil
+        return true
+    }
+
     func signIn() async {
-        guard !isSigningIn else { return }
+        guard hasClientID, !isSigningIn else { return }
         isSigningIn = true
         errorMessage = nil
         defer { isSigningIn = false }
@@ -67,7 +97,7 @@ final class AuthManager {
 
         var components = URLComponents(url: SpotifyConfig.authorizeURL, resolvingAgainstBaseURL: false)!
         components.queryItems = [
-            URLQueryItem(name: "client_id", value: SpotifyConfig.clientID),
+            URLQueryItem(name: "client_id", value: clientID),
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "redirect_uri", value: SpotifyConfig.redirectURI),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
@@ -92,7 +122,7 @@ final class AuthManager {
                 "grant_type": "authorization_code",
                 "code": code,
                 "redirect_uri": SpotifyConfig.redirectURI,
-                "client_id": SpotifyConfig.clientID,
+                "client_id": clientID,
                 "code_verifier": verifier
             ])
             guard let refreshToken = response.refreshToken else { throw AuthError.missingCode }
@@ -144,7 +174,7 @@ final class AuthManager {
         let response = try await requestTokens([
             "grant_type": "refresh_token",
             "refresh_token": current.refreshToken,
-            "client_id": SpotifyConfig.clientID
+            "client_id": clientID
         ])
         return StoredTokens(
             accessToken: response.accessToken,

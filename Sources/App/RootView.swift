@@ -42,35 +42,50 @@ struct RootView: View {
 struct LoginView: View {
     @Environment(AuthManager.self) private var auth
     @Environment(AppSettings.self) private var settings
+    @State private var editingClientID = false
 
     var body: some View {
         ZStack {
             LinearGradient(colors: [settings.accent.opacity(0.5), .black], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
-            VStack(spacing: 28) {
-                Text("Swiftify")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                Button {
-                    Task { await auth.signIn() }
-                } label: {
-                    Text("Sign in with Spotify")
-                        .font(.headline)
-                        .padding(.horizontal, 12)
-                }
-                .buttonStyle(.glassProminent)
-                .controlSize(.large)
-                .disabled(auth.isSigningIn)
-
-                if let message = auth.errorMessage {
-                    Text(message)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .padding(.horizontal, 24)
-                }
+            if auth.hasClientID && !editingClientID {
+                signInContent
+            } else {
+                ClientIDSetupView(
+                    onCancel: auth.hasClientID ? { editingClientID = false } : nil,
+                    onSaved: { editingClientID = false }
+                )
             }
         }
         .environment(\.colorScheme, .dark)
+    }
+
+    private var signInContent: some View {
+        VStack(spacing: 28) {
+            Text("Swiftify")
+                .font(.system(size: 44, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Button {
+                Task { await auth.signIn() }
+            } label: {
+                Text("Sign in with Spotify")
+                    .font(.headline)
+                    .padding(.horizontal, 12)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .disabled(auth.isSigningIn)
+
+            Button("Change Client ID") { editingClientID = true }
+                .buttonStyle(.glass)
+
+            if let message = auth.errorMessage {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 24)
+            }
+        }
     }
 }
 

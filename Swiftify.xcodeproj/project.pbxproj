@@ -37,6 +37,7 @@
 		A3BAAC4BA11568F47B18AD50 /* SwiftifyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DF5A479CF2A69090A0D2FA /* SwiftifyApp.swift */; };
 		A9F7C2525563870D3BB54F3A /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2845162E089807930C2FF0 /* SearchView.swift */; };
 		AA3D0E0945D07788FFAB1E5D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448568EAAECAFD202065608F /* AppSettings.swift */; };
+		B4CAA2B5EFED6125093F8C53 /* ClientIDSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2CE3EF41CEFC29974461207 /* ClientIDSetupView.swift */; };
 		B74A59072BF12ED2D55F0AE9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8AB62131834C889BBB1EB2 /* AuthManager.swift */; };
 		BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5125EC825CC5FD3461D2E70A /* CacheSettings.swift */; };
 		C0062E1906DDF0EA1D255970 /* DeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7FFC64CB2A543BFB7A45AD /* DeviceSheet.swift */; };
@@ -85,6 +86,7 @@
 		B769C5DF06222A13ADFB1C0A /* CacheWarmer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheWarmer.swift; sourceTree = "<group>"; };
 		C1472F5EEA3E293C5FEE4DD5 /* LyricsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LyricsView.swift; sourceTree = "<group>"; };
 		C187B116A8622056CC4AA47E /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
+		D2CE3EF41CEFC29974461207 /* ClientIDSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientIDSetupView.swift; sourceTree = "<group>"; };
 		DB8AB62131834C889BBB1EB2 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		DF195C664DDE5DB99D8DFD1A /* SaveToSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveToSheet.swift; sourceTree = "<group>"; };
 		E47E07B50B8AB7364BD96D94 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 			isa = PBXGroup;
 			children = (
 				083F8D4E913657C67F8C3D07 /* BootLog.swift */,
+				D2CE3EF41CEFC29974461207 /* ClientIDSetupView.swift */,
 				58AF2CBF52301AF75888BBA4 /* LaunchCover.swift */,
 				60A73919D7BA1AB3BD998AC6 /* PlaybackTestView.swift */,
 				AE95AE8EA99EB31F9CE2D06C /* RootView.swift */,
@@ -358,6 +361,7 @@
 				BFE47EB91410B62D01631A37 /* CacheSettings.swift in Sources */,
 				724CEC032C722271F24F17CE /* CacheWarmer.swift in Sources */,
 				9AA1BF32A0D4314CC516E60E /* ChromeState.swift in Sources */,
+				B4CAA2B5EFED6125093F8C53 /* ClientIDSetupView.swift in Sources */,
 				519007480FE4DA19E60C3D4D /* Components.swift in Sources */,
 				D43019C252028289DC589E1D /* CreateSheet.swift in Sources */,
 				D47392733FBB19D85B3AC1BE /* DetailMenu.swift in Sources */,

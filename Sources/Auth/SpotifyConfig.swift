@@ -1,12 +1,12 @@
 import Foundation
 
 enum SpotifyConfig {
-    static let clientID = "193aa6e0ede54c4a8081cc4cf3354c88"
     static let redirectScheme = "swiftify"
     static let redirectURI = "swiftify://callback"
     static let authorizeURL = URL(string: "https://accounts.spotify.com/authorize")!
     static let tokenURL = URL(string: "https://accounts.spotify.com/api/token")!
     static let apiBase = URL(string: "https://api.spotify.com/v1")!
+    static let dashboardURL = URL(string: "https://developer.spotify.com/dashboard")!
 
     static let scopes = [
         "playlist-read-private",
