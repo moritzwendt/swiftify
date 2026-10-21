@@ -135,13 +135,7 @@ struct FullPlayerView: View {
     @State private var showLyrics = false
     @State private var lyricsFrame = CGRect.zero
     @State private var savedWhenOpened = false
-    @State private var dragY: CGFloat = 0
-    @State private var dragAxis: DragAxis?
-    @State private var containerHeight: CGFloat = 800
-    @State private var isClosing = false
     @Namespace private var artworkSpace
-
-    private enum DragAxis { case vertical, ignored }
 
     private var isSaved: Bool {
         guard let uri = player.track?.uri else { return false }
@@ -155,7 +149,6 @@ struct FullPlayerView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: min(dragY / 24, 1) * 48, style: .continuous))
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -171,9 +164,9 @@ struct FullPlayerView: View {
                     LyricsView()
                         .frame(maxHeight: .infinity)
                         .onGeometryChange(for: CGRect.self) { proxy in
-                            proxy.frame(in: .global)
+                            proxy.frame(in: .named("player"))
                         } action: { frame in
-                            if dragY == 0 { lyricsFrame = frame }
+                            lyricsFrame = frame
                         }
                         .transition(.opacity)
                 } else {
@@ -251,12 +244,18 @@ struct FullPlayerView: View {
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
+        .coordinateSpace(name: "player")
         .contentShape(Rectangle())
-        .interactiveDismissDisabled()
-        .presentationBackground(.clear)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { containerHeight = $0 }
-        .offset(y: dragY)
-        .simultaneousGesture(dismissGesture)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    if showLyrics, lyricsFrame.contains(value.startLocation) { return }
+                    let vertical = value.translation.height
+                    if vertical > 90, abs(value.translation.width) < vertical * 0.5 {
+                        dismiss()
+                    }
+                }
+        )
         .sheet(isPresented: $showSave) {
             if let track = player.track {
                 SaveToSheet(track: track, fromPlus: !savedWhenOpened)
@@ -279,46 +278,6 @@ struct FullPlayerView: View {
             if let color = await ArtworkTint.color(for: url) {
                 withAnimation(.easeInOut(duration: 0.6)) { tint = color }
             }
-        }
-    }
-
-    private var dismissGesture: some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .global)
-            .onChanged { value in
-                guard !isClosing else { return }
-                if dragAxis == nil {
-                    let startsInLyrics = showLyrics && lyricsFrame.contains(value.startLocation)
-                    let vertical = value.translation.height > 0 && value.translation.height > abs(value.translation.width)
-                    dragAxis = !startsInLyrics && vertical ? .vertical : .ignored
-                }
-                guard dragAxis == .vertical else { return }
-                dragY = max(0, value.translation.height)
-            }
-            .onEnded { value in
-                let wasVertical = dragAxis == .vertical
-                dragAxis = nil
-                guard wasVertical, !isClosing else { return }
-                let travelled = value.translation.height
-                let velocity = value.velocity.height
-                if travelled > 110 || (travelled > 20 && velocity > 200) {
-                    close(velocity: velocity)
-                } else {
-                    withAnimation(.spring(duration: 0.4, bounce: 0.15)) { dragY = 0 }
-                }
-            }
-    }
-
-    private func close(velocity: CGFloat) {
-        isClosing = true
-        let target = containerHeight + 240
-        let remaining = max(target - dragY, 1)
-        let seconds = min(max(Double(remaining / max(velocity, 1200)), 0.18), 0.32)
-        withAnimation(.easeOut(duration: seconds)) {
-            dragY = target
-        } completion: {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) { dismiss() }
         }
     }
 
