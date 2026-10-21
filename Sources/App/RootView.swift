@@ -87,6 +87,9 @@ struct MainTabView: View {
         }
         .overlay(alignment: .top) { errorToast }
         .haptic(.success, trigger: queue.addedCount)
+        .onChange(of: player.isPlaying ? player.contextURI : nil) { _, uri in
+            if let uri { library.noteRecent(uri) }
+        }
         .task {
             BootLog.post("player", "polling started")
             await library.load()

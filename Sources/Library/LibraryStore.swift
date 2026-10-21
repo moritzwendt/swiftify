@@ -17,6 +17,7 @@ final class LibraryStore {
     private(set) var usageCounts: [String: Int] = [:]
     private(set) var message: String?
     @ObservationIgnored private var saveCounts: [String: Int]
+    @ObservationIgnored private var recentDates: [String: Date]
 
     @ObservationIgnored let api: SpotifyAPI
     @ObservationIgnored let membership: MembershipStore
@@ -25,6 +26,14 @@ final class LibraryStore {
     private static let downloadedKey = "downloadedMarks"
     private static let pinnedKey = "pinnedItems"
     private static let saveCountsKey = "saveCounts"
+    private static let recentKey = "recentPlays"
+    private static let recentLimit = 300
+    private static let fractionalDates: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let plainDates = ISO8601DateFormatter()
 
     init(api: SpotifyAPI) {
         self.api = api
@@ -32,6 +41,9 @@ final class LibraryStore {
         downloaded = Set(UserDefaults.standard.stringArray(forKey: Self.downloadedKey) ?? [])
         pinned = UserDefaults.standard.stringArray(forKey: Self.pinnedKey) ?? []
         saveCounts = UserDefaults.standard.dictionary(forKey: Self.saveCountsKey) as? [String: Int] ?? [:]
+        let storedRecents = UserDefaults.standard.dictionary(forKey: Self.recentKey) as? [String: Double] ?? [:]
+        recentDates = storedRecents.mapValues { Date(timeIntervalSince1970: $0) }
+        recentOrder = recentDates.sorted { $0.value > $1.value }.map(\.key)
     }
 
     func load(force: Bool = false) async {
@@ -59,10 +71,26 @@ final class LibraryStore {
         artists = loadedArtists
         likedTotal = loadedLiked?.total ?? likedTotal
         BootLog.post("library", "\(playlists.count) playlists, \(albums.count) albums, \(artists.count) artists, \(likedTotal) liked songs")
-        let contexts = (loadedHistory?.items ?? []).compactMap { $0.context?.uri }
-        var seen = Set<String>()
-        recentOrder = contexts.filter { seen.insert($0).inserted }
+        let history = loadedHistory?.items ?? []
+        let contexts = history.compactMap { $0.context?.uri }
+        for entry in history {
+            guard let uri = entry.context?.uri, let played = entry.playedAt.flatMap(Self.parseDate) else { continue }
+            if let known = recentDates[uri], known >= played { continue }
+            recentDates[uri] = played
+        }
+        rebuildRecents()
         usageCounts = Dictionary(grouping: contexts, by: { $0 }).mapValues(\.count)
+    }
+
+    private static func parseDate(_ text: String) -> Date? {
+        fractionalDates.date(from: text) ?? plainDates.date(from: text)
+    }
+
+    private func rebuildRecents() {
+        let newest = recentDates.sorted { $0.value > $1.value }.prefix(Self.recentLimit)
+        recentDates = Dictionary(uniqueKeysWithValues: newest.map { ($0.key, $0.value) })
+        recentOrder = newest.map(\.key)
+        UserDefaults.standard.set(recentDates.mapValues(\.timeIntervalSince1970), forKey: Self.recentKey)
     }
 
     func clearMessage() { message = nil }
@@ -103,6 +131,7 @@ final class LibraryStore {
         let previous = albums
         if saved {
             albums.insert(SavedAlbum(addedAt: nil, album: album), at: 0)
+            noteRecent(album.uri)
         } else {
             albums.removeAll { $0.album.id == album.id }
         }
@@ -124,6 +153,7 @@ final class LibraryStore {
         let previous = playlists
         if saved {
             playlists.insert(playlist, at: 0)
+            noteRecent(playlist.uri)
         } else {
             playlists.removeAll { $0.id == playlist.id }
         }
@@ -150,8 +180,8 @@ final class LibraryStore {
     }
 
     func noteRecent(_ uri: String) {
-        recentOrder.removeAll { $0 == uri }
-        recentOrder.insert(uri, at: 0)
+        recentDates[uri] = Date()
+        rebuildRecents()
     }
 
     func reset() {
@@ -161,9 +191,11 @@ final class LibraryStore {
         artists = []
         likedTotal = 0
         recentOrder = []
+        recentDates = [:]
         usageCounts = [:]
         saveCounts = [:]
         UserDefaults.standard.removeObject(forKey: Self.saveCountsKey)
+        UserDefaults.standard.removeObject(forKey: Self.recentKey)
         membership.reset()
         hasLoaded = false
     }
@@ -225,6 +257,7 @@ final class LibraryStore {
         if !description.isEmpty { body["description"] = description }
         let created: Playlist = try await api.post("me/playlists", body: body)
         playlists.insert(created, at: 0)
+        noteRecent(created.uri)
         return created
     }
 

@@ -34,7 +34,6 @@ struct LibraryItem: Identifiable {
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(AppSettings.self) private var settings
-    @Environment(PlayerManager.self) private var player
     @State private var filter: LibraryFilter?
     @State private var sub: LibrarySubFilter?
     @State private var path: [Route] = []
@@ -153,9 +152,6 @@ struct LibraryView: View {
             .appDestinations()
             .haptic(.success, trigger: library.pinned)
             .task { await library.load() }
-            .onChange(of: player.contextURI) { _, uri in
-                if let uri { library.noteRecent(uri) }
-            }
             .overlay {
                 if library.isLoading && library.playlists.isEmpty {
                     ProgressView()
