@@ -246,12 +246,14 @@ struct FullPlayerView: View {
         .environment(\.colorScheme, .dark)
         .coordinateSpace(name: "player")
         .contentShape(Rectangle())
+        .interactiveDismissDisabled()
         .simultaneousGesture(
-            DragGesture(minimumDistance: 24)
+            DragGesture(minimumDistance: 12)
                 .onEnded { value in
                     if showLyrics, lyricsFrame.contains(value.startLocation) { return }
-                    let vertical = value.translation.height
-                    if vertical > 90, abs(value.translation.width) < vertical * 0.5 {
+                    let down = value.translation.height
+                    guard down > 0, abs(value.translation.width) < down else { return }
+                    if down > 50 || (down > 20 && value.predictedEndTranslation.height > 120) {
                         dismiss()
                     }
                 }
