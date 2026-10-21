@@ -40,6 +40,9 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
+    @Environment(AuthManager.self) private var auth
+    @Environment(LyricsStore.self) private var lyrics
+    @Environment(CacheWarmer.self) private var warmer
     @Environment(PlayerManager.self) private var player
     @Environment(QueueStore.self) private var queue
     @Environment(LibraryStore.self) private var library
@@ -51,8 +54,6 @@ struct MainTabView: View {
     @State private var createSnapshot: UIImage?
     @State private var createDestination: CreateDestination?
     @State private var createClosing = false
-    @State private var showPlayer = false
-    @Namespace private var playerSpace
 
     var body: some View {
         TabView(selection: tabSelection) {
@@ -72,7 +73,7 @@ struct MainTabView: View {
         }
         .tabBarMinimizeBehavior(settings.tabBarMinimizes ? .onScrollDown : .never)
         .tabViewBottomAccessory(isEnabled: player.track != nil) {
-            MiniPlayer(namespace: playerSpace) { showPlayer = true }
+            MiniPlayer(onTap: openPlayer)
         }
         .sheet(item: $createDestination, onDismiss: finishCreate) { CreateDestinationSheet(destination: $0) }
         .onChange(of: settings.createOpensSpotify, initial: true) { _, opensSpotify in
@@ -80,10 +81,6 @@ struct MainTabView: View {
         }
         .sheet(isPresented: Binding(get: { chrome.showsSettings }, set: { chrome.showsSettings = $0 })) {
             NavigationStack { SettingsView() }
-        }
-        .fullScreenCover(isPresented: $showPlayer) {
-            FullPlayerView()
-                .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
         }
         .overlay(alignment: .top) { errorToast }
         .haptic(.success, trigger: queue.addedCount)
@@ -105,6 +102,21 @@ struct MainTabView: View {
                 if phase == .background { player.appDidEnterBackground() }
             }
         }
+    }
+
+    private func openPlayer() {
+        PlayerPresenter.shared.present(
+            FullPlayerView()
+                .environment(auth)
+                .environment(library)
+                .environment(player)
+                .environment(queue)
+                .environment(lyrics)
+                .environment(settings)
+                .environment(chrome)
+                .environment(warmer)
+                .tint(settings.accent)
+        )
     }
 
     private var tabSelection: Binding<AppTab> {

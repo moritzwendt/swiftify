@@ -56,6 +56,7 @@ struct SwiftifyApp: App {
                 .preferredColorScheme(auth.isAuthenticated || library.isSample ? settings.appearance.colorScheme : .dark)
                 .onChange(of: auth.isAuthenticated) { _, signedIn in
                     if !signedIn {
+                        PlayerPresenter.shared.dismiss()
                         library.reset()
                         player.reset()
                         queue.reset()

@@ -5,7 +5,6 @@ struct MiniPlayer: View {
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
     @State private var dragX: CGFloat = 0
     @State private var swipeCount = 0
-    let namespace: Namespace.ID
     let onTap: () -> Void
 
     var body: some View {
@@ -13,7 +12,6 @@ struct MiniPlayer: View {
         HStack(spacing: 12) {
             ArtworkView(url: player.artworkURL(atLeast: 100), cornerRadius: 6)
                 .frame(width: 36, height: 36)
-                .matchedTransitionSource(id: "player", in: namespace)
             VStack(alignment: .leading, spacing: 0) {
                 Text(player.track?.name ?? "")
                     .font(.subheadline.weight(.semibold))
@@ -47,6 +45,7 @@ struct MiniPlayer: View {
             }
         }
         .padding(.horizontal, 16)
+        .background(ZoomSourceAnchor())
         .offset(x: dragX)
         .opacity(1 - min(abs(dragX) / 200, 0.5))
         .contentShape(Rectangle())
@@ -127,13 +126,11 @@ struct FullPlayerView: View {
     @Environment(PlayerManager.self) private var player
     @Environment(AppSettings.self) private var settings
     @Environment(LibraryStore.self) private var library
-    @Environment(\.dismiss) private var dismiss
     @State private var tint: Color = .gray
     @State private var showSave = false
     @State private var showQueue = false
     @State private var showDevices = false
     @State private var showLyrics = false
-    @State private var lyricsFrame = CGRect.zero
     @State private var savedWhenOpened = false
     @Namespace private var artworkSpace
 
@@ -164,10 +161,11 @@ struct FullPlayerView: View {
                     LyricsView()
                         .frame(maxHeight: .infinity)
                         .onGeometryChange(for: CGRect.self) { proxy in
-                            proxy.frame(in: .named("player"))
+                            proxy.frame(in: .global)
                         } action: { frame in
-                            lyricsFrame = frame
+                            PlayerPresenter.shared.lyricsFrame = frame
                         }
+                        .onDisappear { PlayerPresenter.shared.lyricsFrame = .zero }
                         .transition(.opacity)
                 } else {
                     ArtworkView(url: player.artworkURL(atLeast: 640), cornerRadius: 16)
@@ -244,18 +242,6 @@ struct FullPlayerView: View {
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
-        .coordinateSpace(name: "player")
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 24)
-                .onEnded { value in
-                    if showLyrics, lyricsFrame.contains(value.startLocation) { return }
-                    let vertical = value.translation.height
-                    if vertical > 90, abs(value.translation.width) < vertical * 0.5 {
-                        dismiss()
-                    }
-                }
-        )
         .sheet(isPresented: $showSave) {
             if let track = player.track {
                 SaveToSheet(track: track, fromPlus: !savedWhenOpened)
@@ -384,5 +370,67 @@ struct FullPlayerView: View {
                 button
             }
         }
+    }
+}
+
+@MainActor
+final class PlayerPresenter {
+    static let shared = PlayerPresenter()
+
+    weak var source: UIView?
+    var lyricsFrame = CGRect.zero
+    private weak var presented: UIViewController?
+
+    func present(_ content: some View) {
+        if let presented, presented.presentingViewController != nil { return }
+        guard let host = Self.topController() else { return }
+        let controller = UIHostingController(rootView: content)
+        controller.view.backgroundColor = .black
+        controller.modalPresentationStyle = .overFullScreen
+        controller.modalPresentationCapturesStatusBarAppearance = true
+        let options = UIViewController.Transition.ZoomOptions()
+        options.interactiveDismissShouldBegin = { context in
+            if PlayerPresenter.shared.lyricsFrame.contains(context.location) { return context.willBegin }
+            let velocity = context.velocity
+            return context.willBegin || (velocity.dy > 0 && velocity.dy > abs(velocity.dx))
+        }
+        controller.preferredTransition = .zoom(options: options) { _ in PlayerPresenter.shared.source }
+        presented = controller
+        host.present(controller, animated: true)
+    }
+
+    func dismiss() {
+        presented?.dismiss(animated: false)
+    }
+
+    private static func topController() -> UIViewController? {
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+        var top = window?.rootViewController
+        while let next = top?.presentedViewController { top = next }
+        return top
+    }
+}
+
+struct ZoomSourceAnchor: UIViewRepresentable {
+    func makeUIView(context: Context) -> ZoomSourceView {
+        let view = ZoomSourceView()
+        view.isUserInteractionEnabled = false
+        PlayerPresenter.shared.source = view
+        return view
+    }
+
+    func updateUIView(_ view: ZoomSourceView, context: Context) {
+        PlayerPresenter.shared.source = view
+    }
+}
+
+final class ZoomSourceView: UIView {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        layer.cornerRadius = bounds.height / 2
+        layer.cornerCurve = .continuous
     }
 }
